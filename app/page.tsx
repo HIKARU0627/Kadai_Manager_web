@@ -5,71 +5,39 @@ import { Button } from "@/components/ui/button"
 import { Calendar, Clock, MapPin, Plus } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { redirect } from "next/navigation"
+import { getTodaySubjects } from "@/app/actions/subjects"
+import { getTodayTasks } from "@/app/actions/tasks"
+import { getTodayEvents } from "@/app/actions/events"
 
-// モックデータ
-const todaySubjects = [
-  {
-    id: "1",
-    name: "数学I",
-    period: 1,
-    startTime: "09:00",
-    endTime: "10:30",
-    classroom: "A棟301",
-    teacher: "佐藤先生",
-    color: "#3B82F6",
-  },
-  {
-    id: "2",
-    name: "英語会話",
-    period: 2,
-    startTime: "10:40",
-    endTime: "12:10",
-    classroom: "B棟205",
-    teacher: "Smith先生",
-    color: "#10B981",
-  },
-  {
-    id: "3",
-    name: "プログラミング基礎",
-    period: 3,
-    startTime: "13:00",
-    endTime: "14:30",
-    classroom: "C棟コンピュータ室",
-    teacher: "鈴木先生",
-    color: "#8B5CF6",
-  },
-]
+const statusLabels = {
+  not_started: "未着手",
+  in_progress: "作業中",
+  completed: "完了",
+}
 
-const todayTasks = [
-  {
-    id: "1",
-    title: "レポート: 微分積分の応用",
-    subject: "数学I",
-    dueTime: "23:59",
-    status: "作業中",
-  },
-  {
-    id: "2",
-    title: "課題: 英作文エッセイ",
-    subject: "英語会話",
-    dueTime: "18:00",
-    status: "未着手",
-  },
-]
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions)
 
-const todayEvents = [
-  {
-    id: "1",
-    title: "図書館で自習",
-    startTime: "15:00",
-    endTime: "18:00",
-    location: "大学図書館3階",
-  },
-]
+  if (!session?.user?.id) {
+    redirect("/login")
+  }
 
-export default function DashboardPage() {
   const today = new Date()
   const formattedDate = format(today, "yyyy年MM月dd日（E）", { locale: ja })
+
+  // データベースからデータを取得
+  const [subjectsResult, tasksResult, eventsResult] = await Promise.all([
+    getTodaySubjects(session.user.id),
+    getTodayTasks(session.user.id),
+    getTodayEvents(session.user.id),
+  ])
+
+  const todaySubjects = subjectsResult.success ? subjectsResult.data : []
+  const todayTasks = tasksResult.success ? tasksResult.data : []
+  const todayEvents = eventsResult.success ? eventsResult.data : []
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -97,29 +65,39 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {todaySubjects.map((subject) => (
-                  <div
-                    key={subject.id}
-                    className="border-l-4 p-4 rounded-r-lg"
-                    style={{
-                      borderLeftColor: subject.color,
-                      backgroundColor: `${subject.color}10`,
-                    }}
-                  >
-                    <p className="font-semibold text-gray-800">
-                      {subject.period}限: {subject.name}
-                    </p>
-                    <p className="text-sm text-gray-600 flex items-center mt-1">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {subject.startTime} - {subject.endTime}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      教室: {subject.classroom} / 担当: {subject.teacher}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              {todaySubjects.length > 0 ? (
+                <div className="space-y-3">
+                  {todaySubjects.map((subject) => (
+                    <div
+                      key={subject.id}
+                      className="border-l-4 p-4 rounded-r-lg"
+                      style={{
+                        borderLeftColor: subject.color,
+                        backgroundColor: `${subject.color}10`,
+                      }}
+                    >
+                      <p className="font-semibold text-gray-800">
+                        {subject.period}限: {subject.name}
+                      </p>
+                      <p className="text-sm text-gray-600 flex items-center mt-1">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {subject.startTime} - {subject.endTime}
+                      </p>
+                      {(subject.classroom || subject.teacher) && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {subject.classroom && `教室: ${subject.classroom}`}
+                          {subject.classroom && subject.teacher && " / "}
+                          {subject.teacher && `担当: ${subject.teacher}`}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  今日の授業はありません
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -137,37 +115,47 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {todayTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="border border-red-200 bg-red-50 p-4 rounded-lg"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800">
-                          {task.title}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          科目: {task.subject}
-                        </p>
-                        <p className="text-sm text-red-600 font-medium mt-1">
-                          締め切り: 今日 {task.dueTime}
-                        </p>
+              {todayTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {todayTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="border border-red-200 bg-red-50 p-4 rounded-lg"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">
+                            {task.title}
+                          </p>
+                          {task.subject && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              科目: {task.subject.name}
+                            </p>
+                          )}
+                          <p className="text-sm text-red-600 font-medium mt-1">
+                            締め切り: {format(task.dueDate, "HH:mm", { locale: ja })}
+                          </p>
+                        </div>
+                        <Badge
+                          className={
+                            task.status === "in_progress"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : task.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {statusLabels[task.status as keyof typeof statusLabels]}
+                        </Badge>
                       </div>
-                      <Badge
-                        className={
-                          task.status === "作業中"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
-                        }
-                      >
-                        {task.status}
-                      </Badge>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  今日締め切りの課題はありません
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -185,37 +173,54 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {todayEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg"
-                  >
-                    <p className="font-semibold text-gray-800">{event.title}</p>
-                    <p className="text-sm text-gray-600 mt-1 flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {event.startTime} - {event.endTime}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1 flex items-center">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {event.location}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              {todayEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {todayEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="border-l-4 p-4 rounded-r-lg"
+                      style={{
+                        borderLeftColor: event.color,
+                        backgroundColor: `${event.color}10`,
+                      }}
+                    >
+                      <p className="font-semibold text-gray-800">{event.title}</p>
+                      <p className="text-sm text-gray-600 mt-1 flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {format(event.startDatetime, "HH:mm", { locale: ja })} -{" "}
+                        {format(event.endDatetime, "HH:mm", { locale: ja })}
+                      </p>
+                      {event.location && (
+                        <p className="text-sm text-gray-500 mt-1 flex items-center">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          {event.location}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  今日の予定はありません
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* クイックアクション */}
         <div className="mt-8 flex space-x-4">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-5 h-5 mr-2" />
-            新しい課題を追加
+          <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+            <a href="/tasks">
+              <Plus className="w-5 h-5 mr-2" />
+              新しい課題を追加
+            </a>
           </Button>
-          <Button variant="outline">
-            <Plus className="w-5 h-5 mr-2" />
-            予定を追加
+          <Button variant="outline" asChild>
+            <a href="/calendar">
+              <Plus className="w-5 h-5 mr-2" />
+              予定を追加
+            </a>
           </Button>
         </div>
       </main>

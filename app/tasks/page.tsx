@@ -1,86 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddTaskModal } from "@/components/modals/AddTaskModal"
 import { Clock, Paperclip, Plus, Search, Edit } from "lucide-react"
-
-// モックデータ
-const mockSubjects = [
-  { id: "1", name: "数学I", color: "#3B82F6" },
-  { id: "2", name: "英語会話", color: "#10B981" },
-  { id: "3", name: "プログラミング基礎", color: "#8B5CF6" },
-  { id: "4", name: "日本史", color: "#6366F1" },
-  { id: "5", name: "物理学", color: "#EC4899" },
-]
-
-const mockTasks = [
-  {
-    id: "1",
-    title: "レポート: 微分積分の応用",
-    description: "関数の極限と導関数について、具体例を用いてレポートを作成する。最低2000文字以上。",
-    subject: "数学I",
-    subjectColor: "blue",
-    dueDate: "2025/11/17 23:59",
-    status: "not_started",
-    priority: 2,
-    filesCount: 2,
-  },
-  {
-    id: "2",
-    title: "課題: 英作文エッセイ",
-    description: "テーマ「My Future Career」について、300語以上のエッセイを英語で書く。",
-    subject: "英語会話",
-    subjectColor: "green",
-    dueDate: "2025/11/17 18:00",
-    status: "not_started",
-    priority: 1,
-    filesCount: 0,
-  },
-  {
-    id: "3",
-    title: "課題: Pythonプログラム作成",
-    description: "ソートアルゴリズム（バブルソート、クイックソート）をPythonで実装し、実行時間を比較する。",
-    subject: "プログラミング基礎",
-    subjectColor: "purple",
-    dueDate: "2025/11/20 23:59",
-    status: "not_started",
-    priority: 0,
-    filesCount: 1,
-  },
-  {
-    id: "4",
-    title: "レポート: 江戸時代の経済",
-    description: "江戸時代の商業発展について、参考文献を3冊以上用いてレポートを作成する。",
-    subject: "日本史",
-    subjectColor: "indigo",
-    dueDate: "2025/11/25 23:59",
-    status: "not_started",
-    priority: 0,
-    filesCount: 0,
-  },
-  {
-    id: "5",
-    title: "実験レポート: 力学実験",
-    description: "振り子の周期測定実験の結果をまとめ、理論値との比較を行う。",
-    subject: "物理学",
-    subjectColor: "pink",
-    dueDate: "2025/11/30 17:00",
-    status: "not_started",
-    priority: 0,
-    filesCount: 0,
-  },
-]
-
-const tabs = [
-  { id: "not_started", label: "未着手", count: 5 },
-  { id: "in_progress", label: "作業中", count: 3 },
-  { id: "completed", label: "完了", count: 12 },
-  { id: "all", label: "すべて", count: 20 },
-]
+import { getTasks, updateTask, TaskStatus } from "@/app/actions/tasks"
+import { getSubjects } from "@/app/actions/subjects"
+import { format } from "date-fns"
+import { ja } from "date-fns/locale"
 
 const priorityLabels = {
   0: { label: "通常", color: "gray" },
@@ -94,10 +25,78 @@ const statusLabels = {
   completed: "完了",
 }
 
+type Task = {
+  id: string
+  title: string
+  description: string | null
+  dueDate: Date
+  status: string
+  priority: number
+  subject: { id: string; name: string; color: string } | null
+  files: any[]
+}
+
+type Subject = {
+  id: string
+  name: string
+  color: string
+}
+
 export default function TasksPage() {
-  const [activeTab, setActiveTab] = useState("not_started")
+  const { data: session } = useSession()
+  const [activeTab, setActiveTab] = useState<TaskStatus | "all">("not_started")
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // データを取得
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!session?.user?.id) return
+
+      setIsLoading(true)
+      try {
+        const [tasksResult, subjectsResult] = await Promise.all([
+          getTasks(session.user.id, {
+            status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
+            search: searchQuery || undefined,
+          }),
+          getSubjects(session.user.id),
+        ])
+
+        if (tasksResult.success) {
+          setTasks(tasksResult.data as Task[])
+        }
+        if (subjectsResult.success) {
+          setSubjects(subjectsResult.data as Subject[])
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [session?.user?.id, activeTab, searchQuery])
+
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    try {
+      const result = await updateTask({ id: taskId, status: newStatus })
+      if (result.success) {
+        // 状態を更新
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === taskId ? { ...task, status: newStatus } : task
+          )
+        )
+      }
+    } catch (error) {
+      console.error("Failed to update task status:", error)
+    }
+  }
 
   const getPriorityColor = (priority: number) => {
     const colors = {
@@ -106,6 +105,27 @@ export default function TasksPage() {
       2: "border-red-500",
     }
     return colors[priority as keyof typeof colors] || colors[0]
+  }
+
+  // タブのカウントを計算
+  const getTabCount = (status: TaskStatus | "all") => {
+    if (status === "all") return tasks.length
+    return tasks.filter((t) => t.status === status).length
+  }
+
+  const tabs = [
+    { id: "not_started" as const, label: "未着手" },
+    { id: "in_progress" as const, label: "作業中" },
+    { id: "completed" as const, label: "完了" },
+    { id: "all" as const, label: "すべて" },
+  ]
+
+  if (!session?.user?.id) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-gray-500">ログインしてください</p>
+      </div>
+    )
   }
 
   return (
@@ -163,7 +183,7 @@ export default function TasksPage() {
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
-                  {tab.count}
+                  {getTabCount(tab.id)}
                 </span>
               </button>
             ))}
@@ -171,102 +191,114 @@ export default function TasksPage() {
         </div>
 
         {/* 課題カードリスト */}
-        <div className="space-y-4">
-          {mockTasks.map((task) => {
-            const priority = priorityLabels[task.priority as keyof typeof priorityLabels]
-            const isUrgent = task.priority === 2
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">読み込み中...</p>
+          </div>
+        ) : tasks.length > 0 ? (
+          <div className="space-y-4">
+            {tasks.map((task) => {
+              const priority =
+                priorityLabels[task.priority as keyof typeof priorityLabels]
+              const isUrgent = task.priority === 2
 
-            return (
-              <Card
-                key={task.id}
-                className={`p-6 border-l-4 hover:shadow-lg transition ${getPriorityColor(
-                  task.priority
-                )}`}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <Badge
-                        className={`mr-2 ${
-                          isUrgent
-                            ? "bg-red-100 text-red-700"
-                            : priority.color === "yellow"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {priority.label}
-                      </Badge>
-                      <Badge
-                        className={`bg-${task.subjectColor}-100 text-${task.subjectColor}-700`}
-                      >
-                        {task.subject}
-                      </Badge>
-                    </div>
+              return (
+                <Card
+                  key={task.id}
+                  className={`p-6 border-l-4 hover:shadow-lg transition ${getPriorityColor(
+                    task.priority
+                  )}`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <Badge
+                          className={`mr-2 ${
+                            isUrgent
+                              ? "bg-red-100 text-red-700"
+                              : priority.color === "yellow"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {priority.label}
+                        </Badge>
+                        {task.subject && (
+                          <Badge
+                            style={{
+                              backgroundColor: `${task.subject.color}20`,
+                              color: task.subject.color,
+                            }}
+                          >
+                            {task.subject.name}
+                          </Badge>
+                        )}
+                      </div>
 
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                      {task.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3">
-                      {task.description}
-                    </p>
-
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span
-                        className={`flex items-center ${
-                          isUrgent ? "text-red-500" : ""
-                        }`}
-                      >
-                        <Clock className="w-4 h-4 mr-1" />
-                        締め切り: {task.dueDate}
-                        {isUrgent && " (今日)"}
-                      </span>
-                      {task.filesCount > 0 && (
-                        <span className="flex items-center">
-                          <Paperclip className="w-4 h-4 mr-1" />
-                          {task.filesCount}個のファイル添付
-                        </span>
+                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                        {task.title}
+                      </h3>
+                      {task.description && (
+                        <p className="text-gray-600 text-sm mb-3">
+                          {task.description}
+                        </p>
                       )}
+
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span
+                          className={`flex items-center ${
+                            isUrgent ? "text-red-500" : ""
+                          }`}
+                        >
+                          <Clock className="w-4 h-4 mr-1" />
+                          締め切り:{" "}
+                          {format(new Date(task.dueDate), "yyyy/MM/dd HH:mm", {
+                            locale: ja,
+                          })}
+                        </span>
+                        {task.files && task.files.length > 0 && (
+                          <span className="flex items-center">
+                            <Paperclip className="w-4 h-4 mr-1" />
+                            {task.files.length}個のファイル添付
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="ml-6 flex flex-col items-end">
+                      <select
+                        className="mb-3 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={task.status}
+                        onChange={(e) =>
+                          handleStatusChange(task.id, e.target.value as TaskStatus)
+                        }
+                      >
+                        <option value="not_started">未着手</option>
+                        <option value="in_progress">作業中</option>
+                        <option value="completed">完了</option>
+                      </select>
+                      <Button variant="ghost" size="icon" className="text-gray-400">
+                        <Edit className="w-5 h-5" />
+                      </Button>
                     </div>
                   </div>
-
-                  <div className="ml-6 flex flex-col items-end">
-                    <select className="mb-3 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="not_started">未着手</option>
-                      <option value="in_progress">作業中</option>
-                      <option value="completed">完了</option>
-                    </select>
-                    <Button variant="link" className="text-blue-600 mb-2">
-                      詳細を見る
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-gray-400">
-                      <Edit className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-
-        {/* ページネーション */}
-        <div className="mt-8 flex justify-center">
-          <nav className="flex items-center space-x-2">
-            <Button variant="outline">前へ</Button>
-            <Button className="bg-blue-600">1</Button>
-            <Button variant="outline">2</Button>
-            <Button variant="outline">3</Button>
-            <Button variant="outline">次へ</Button>
-          </nav>
-        </div>
+                </Card>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">課題がありません</p>
+          </div>
+        )}
       </main>
 
       {/* 課題追加モーダル */}
       <AddTaskModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        subjects={mockSubjects}
-        userId="mock-user-id"
+        subjects={subjects}
+        userId={session.user.id}
       />
     </div>
   )
