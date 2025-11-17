@@ -15,23 +15,26 @@
 - **優先度管理**: 課題の優先度設定（低・中・高）
 - **Server Actions API**: 課題、時間割、予定、授業メモ、ファイル、リマインダーの完全なCRUD操作
 - **UIコンポーネント**: Dialog、Input、Label、Select、Textareaなどの再利用可能なコンポーネント
+- **モーダルダイアログUI**: 課題・時間割・予定・メモの追加フォーム
+- **ユーザー認証**: NextAuth.jsによるログイン/ログアウト機能
 
 ### 🚧 今後の実装予定
 
-- モーダルダイアログUI（課題・時間割・予定・メモの追加/編集フォーム）
 - ファイルアップロード機能（実ファイルの保存）
 - リマインダー通知UI（通知表示）
-- ユーザー認証（NextAuth.js）
 - 実データベース連携（現在はモックデータを使用）
+- 編集・削除モーダルの実装
 
 ## 技術スタック
 
 - **フロントエンド**: Next.js 14 (App Router), React 18, TypeScript
 - **スタイリング**: Tailwind CSS
-- **UIコンポーネント**: カスタムコンポーネント (shadcn/ui inspired)
+- **UIコンポーネント**: カスタムコンポーネント (shadcn/ui inspired), Radix UI
 - **アイコン**: Lucide React
 - **日付処理**: date-fns
-- **データベース**: Prisma + PostgreSQL (設定済み)
+- **認証**: NextAuth.js v4
+- **データベース**: Prisma + SQLite (開発環境) / PostgreSQL (本番環境)
+- **パスワードハッシュ**: bcryptjs
 
 ## セットアップ
 
@@ -65,11 +68,17 @@ NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key-change-this-in-production
 \`\`\`
 
-4. Prismaのセットアップ（本番環境のみ）
+4. データベースのセットアップ
 
 \`\`\`bash
-npx prisma generate
-npx prisma db push
+# Prismaクライアントを生成
+npm run db:generate
+
+# データベースをプッシュ（スキーマを適用）
+npm run db:push
+
+# テストユーザーとサンプルデータを作成
+npm run db:init
 \`\`\`
 
 5. 開発サーバーを起動
@@ -78,7 +87,12 @@ npx prisma db push
 npm run dev
 \`\`\`
 
-6. ブラウザで http://localhost:3000 を開く
+6. ブラウザで http://localhost:3000 を開き、以下のテストアカウントでログイン
+
+\`\`\`
+Email: test@example.com
+Password: password123
+\`\`\`
 
 ## プロジェクト構造
 

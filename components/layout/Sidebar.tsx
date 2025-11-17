@@ -2,13 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
   Home,
   Calendar,
   CheckSquare,
   CalendarDays,
   FileText,
+  LogOut,
 } from "lucide-react"
 
 const navItems = [
@@ -41,6 +44,15 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" })
+  }
+
+  const userInitial = session?.user?.name
+    ? session.user.name.charAt(0).toUpperCase()
+    : session?.user?.email?.charAt(0).toUpperCase() || "U"
 
   return (
     <aside className="w-64 bg-white shadow-lg flex flex-col">
@@ -74,16 +86,32 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-gray-200 bg-white">
-        <div className="flex items-center">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-            田
-          </div>
-          <div className="ml-3">
-            <p className="font-medium text-gray-700">田中太郎</p>
-            <p className="text-sm text-gray-500">student@example.com</p>
-          </div>
-        </div>
+      <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+        {session?.user && (
+          <>
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                {userInitial}
+              </div>
+              <div className="ml-3 flex-1 overflow-hidden">
+                <p className="font-medium text-gray-700 truncate">
+                  {session.user.name || session.user.username}
+                </p>
+                <p className="text-sm text-gray-500 truncate">
+                  {session.user.email}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              ログアウト
+            </Button>
+          </>
+        )}
       </div>
     </aside>
   )
