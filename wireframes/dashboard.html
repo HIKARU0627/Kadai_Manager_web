@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード - 学校スケジュール管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- サイドナビゲーション -->
+    <aside class="w-64 bg-white shadow-lg">
+      <div class="p-6 border-b border-gray-200">
+        <h1 class="text-2xl font-bold text-blue-600">学校管理アプリ</h1>
+      </div>
+      <nav class="p-4">
+        <ul class="space-y-2">
+          <li>
+            <a href="#" class="flex items-center p-3 bg-blue-50 text-blue-600 rounded-lg font-medium">
+              <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+              </svg>
+              ダッシュボード
+            </a>
+          </li>
+          <li>
+            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"></path>
+              </svg>
+              時間割
+            </a>
+          </li>
+          <li>
+            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+              </svg>
+              課題
+            </a>
+          </li>
+          <li>
+            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+              </svg>
+              カレンダー
+            </a>
+          </li>
+          <li>
+            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              授業メモ
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- ユーザー情報 -->
+      <div class="absolute bottom-0 w-64 p-4 border-t border-gray-200 bg-white">
+        <div class="flex items-center">
+          <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+            田
+          </div>
+          <div class="ml-3">
+            <p class="font-medium text-gray-700">田中太郎</p>
+            <p class="text-sm text-gray-500">student@example.com</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <main class="flex-1 overflow-y-auto p-8">
+      <!-- ヘッダー -->
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">ダッシュボード</h2>
+        <p class="text-gray-600 mt-2">2025年11月17日（日）</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- 今日の時間割カード -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+              <svg class="w-6 h-6 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"></path>
+              </svg>
+              今日の時間割
+            </h3>
+            <span class="text-sm bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-medium">3件</span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- 時間割アイテム例 -->
+            <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="font-semibold text-gray-800">1限: 数学I</p>
+                  <p class="text-sm text-gray-600">9:00 - 10:30</p>
+                  <p class="text-sm text-gray-500 mt-1">教室: A棟301 / 担当: 佐藤先生</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="font-semibold text-gray-800">2限: 英語会話</p>
+                  <p class="text-sm text-gray-600">10:40 - 12:10</p>
+                  <p class="text-sm text-gray-500 mt-1">教室: B棟205 / 担当: Smith先生</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r-lg">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="font-semibold text-gray-800">3限: プログラミング基礎</p>
+                  <p class="text-sm text-gray-600">13:00 - 14:30</p>
+                  <p class="text-sm text-gray-500 mt-1">教室: C棟コンピュータ室 / 担当: 鈴木先生</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 今日が締め切りの課題カード -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+              <svg class="w-6 h-6 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+              </svg>
+              今日が締め切りの課題
+            </h3>
+            <span class="text-sm bg-red-100 text-red-600 px-3 py-1 rounded-full font-medium">2件</span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- 課題アイテム例 -->
+            <div class="border border-red-200 bg-red-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <p class="font-semibold text-gray-800">レポート: 微分積分の応用</p>
+                  <p class="text-sm text-gray-600 mt-1">科目: 数学I</p>
+                  <p class="text-sm text-red-600 font-medium mt-1">締め切り: 今日 23:59</p>
+                </div>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">作業中</span>
+              </div>
+            </div>
+
+            <div class="border border-red-200 bg-red-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <p class="font-semibold text-gray-800">課題: 英作文エッセイ</p>
+                  <p class="text-sm text-gray-600 mt-1">科目: 英語会話</p>
+                  <p class="text-sm text-red-600 font-medium mt-1">締め切り: 今日 18:00</p>
+                </div>
+                <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full font-medium">未着手</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 今日の個人的な予定カード -->
+        <div class="bg-white rounded-lg shadow-md p-6 lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+              <svg class="w-6 h-6 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+              </svg>
+              今日の個人的な予定
+            </h3>
+            <span class="text-sm bg-green-100 text-green-600 px-3 py-1 rounded-full font-medium">1件</span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- 予定アイテム例 -->
+            <div class="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg flex justify-between items-start">
+              <div>
+                <p class="font-semibold text-gray-800">図書館で自習</p>
+                <p class="text-sm text-gray-600 mt-1">15:00 - 18:00</p>
+                <p class="text-sm text-gray-500 mt-1 flex items-center">
+                  <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                  </svg>
+                  大学図書館3階
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- クイックアクション -->
+      <div class="mt-8 flex space-x-4">
+        <button class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path>
+          </svg>
+          新しい課題を追加
+        </button>
+        <button class="bg-white text-gray-700 border border-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path>
+          </svg>
+          予定を追加
+        </button>
+      </div>
+    </main>
+
+  </div>
+</body>
+</html>
