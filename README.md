@@ -13,12 +13,14 @@
 - **授業メモ機能**: 科目別メモ、小テスト日程、お知らせの管理
 - **検索機能**: 課題名・科目名・メモ内容での検索
 - **優先度管理**: 課題の優先度設定（低・中・高）
-- **Server Actions API**: 課題、時間割、予定、授業メモの完全なCRUD操作
+- **Server Actions API**: 課題、時間割、予定、授業メモ、ファイル、リマインダーの完全なCRUD操作
+- **UIコンポーネント**: Dialog、Input、Label、Select、Textareaなどの再利用可能なコンポーネント
 
 ### 🚧 今後の実装予定
 
-- リマインダー機能（通知）
-- ファイル管理機能（アップロード・ダウンロード）
+- モーダルダイアログUI（課題・時間割・予定・メモの追加/編集フォーム）
+- ファイルアップロード機能（実ファイルの保存）
+- リマインダー通知UI（通知表示）
 - ユーザー認証（NextAuth.js）
 - 実データベース連携（現在はモックデータを使用）
 
@@ -87,7 +89,9 @@ Kadai_Manager_web/
 │   │   ├── tasks.ts      # 課題CRUD
 │   │   ├── subjects.ts   # 時間割CRUD
 │   │   ├── events.ts     # 予定CRUD
-│   │   └── notes.ts      # 授業メモCRUD
+│   │   ├── notes.ts      # 授業メモCRUD
+│   │   ├── files.ts      # ファイルCRUD
+│   │   └── reminders.ts  # リマインダーCRUD
 │   ├── layout.tsx         # ルートレイアウト
 │   ├── page.tsx           # ダッシュボード
 │   ├── tasks/             # 課題管理ページ
@@ -100,7 +104,12 @@ Kadai_Manager_web/
 │   └── ui/               # UIコンポーネント
 │       ├── card.tsx
 │       ├── badge.tsx
-│       └── button.tsx
+│       ├── button.tsx
+│       ├── dialog.tsx
+│       ├── input.tsx
+│       ├── label.tsx
+│       ├── select.tsx
+│       └── textarea.tsx
 ├── lib/                   # ユーティリティ関数
 │   ├── utils.ts          # 汎用ユーティリティ
 │   └── prisma.ts         # Prismaクライアント
