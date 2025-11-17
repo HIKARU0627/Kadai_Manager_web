@@ -1,5 +1,6 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -97,6 +98,7 @@ const schedule = {
 }
 
 export default function SubjectsPage() {
+  const { data: session } = useSession()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   return (
@@ -257,7 +259,7 @@ export default function SubjectsPage() {
       <AddSubjectModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        userId="mock-user-id"
+        userId={session?.user?.id || ""}
       />
     </div>
   )

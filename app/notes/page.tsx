@@ -1,5 +1,6 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -100,6 +101,7 @@ const noteTypes = [
 ]
 
 export default function NotesPage() {
+  const { data: session } = useSession()
   const [selectedSubject, setSelectedSubject] = useState("すべて")
   const [selectedNoteType, setSelectedNoteType] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
@@ -354,7 +356,7 @@ export default function NotesPage() {
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         subjects={mockSubjects}
-        userId="mock-user-id"
+        userId={session?.user?.id || ""}
       />
     </div>
   )

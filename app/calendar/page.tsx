@@ -1,5 +1,6 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -76,6 +77,7 @@ const events = [
 ]
 
 export default function CalendarPage() {
+  const { data: session } = useSession()
   const [currentMonth, setCurrentMonth] = useState(new Date(2025, 10, 17))
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -371,7 +373,7 @@ export default function CalendarPage() {
       <AddEventModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        userId="mock-user-id"
+        userId={session?.user?.id || ""}
       />
     </div>
   )
