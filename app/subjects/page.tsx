@@ -6,8 +6,10 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AddSubjectModal } from "@/components/modals/AddSubjectModal"
+import { EditSubjectModal } from "@/components/modals/EditSubjectModal"
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
 import { Plus, Clock, MapPin, User } from "lucide-react"
-import { getWeeklySchedule, getSubjects } from "@/app/actions/subjects"
+import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
 
 const weekDays = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日"]
 const periods = [
@@ -33,9 +35,13 @@ interface Subject {
 export default function SubjectsPage() {
   const { data: session } = useSession()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // データの取得
   useEffect(() => {
@@ -68,24 +74,69 @@ export default function SubjectsPage() {
       index === self.findIndex((s) => s.name === subject.name)
   )
 
-  // モーダル閉じた時にデータを再取得
-  const handleModalClose = async (open: boolean) => {
-    setIsAddModalOpen(open)
-    if (!open && session?.user?.id) {
-      // モーダルが閉じられた場合、データを再取得
-      const [scheduleResult, subjectsResult] = await Promise.all([
-        getWeeklySchedule(session.user.id),
-        getSubjects(session.user.id),
-      ])
+  // データ再取得の共通関数
+  const fetchScheduleData = async () => {
+    if (!session?.user?.id) return
 
-      if (scheduleResult.success) {
-        setSchedule(scheduleResult.data)
-      }
+    const [scheduleResult, subjectsResult] = await Promise.all([
+      getWeeklySchedule(session.user.id),
+      getSubjects(session.user.id),
+    ])
 
-      if (subjectsResult.success) {
-        setSubjects(subjectsResult.data)
-      }
+    if (scheduleResult.success) {
+      setSchedule(scheduleResult.data)
     }
+
+    if (subjectsResult.success) {
+      setSubjects(subjectsResult.data)
+    }
+  }
+
+  // 追加モーダル閉じた時にデータを再取得
+  const handleAddModalClose = async (open: boolean) => {
+    setIsAddModalOpen(open)
+    if (!open) {
+      await fetchScheduleData()
+    }
+  }
+
+  // 編集モーダル閉じた時にデータを再取得
+  const handleEditModalClose = async (open: boolean) => {
+    setIsEditModalOpen(open)
+    if (!open) {
+      await fetchScheduleData()
+      setSelectedSubject(null)
+    }
+  }
+
+  // 編集ボタンのハンドラー
+  const handleEdit = (subject: Subject) => {
+    setSelectedSubject(subject)
+    setIsEditModalOpen(true)
+  }
+
+  // 削除ボタンのハンドラー
+  const handleDeleteClick = (subject: Subject) => {
+    setSelectedSubject(subject)
+    setIsDeleteDialogOpen(true)
+  }
+
+  // 削除確認のハンドラー
+  const handleDeleteConfirm = async () => {
+    if (!selectedSubject) return
+
+    setIsDeleting(true)
+    const result = await deleteSubject(selectedSubject.id)
+
+    if (result.success) {
+      setIsDeleteDialogOpen(false)
+      setSelectedSubject(null)
+      await fetchScheduleData()
+    } else {
+      alert(result.error || "削除に失敗しました")
+    }
+
+    setIsDeleting(false)
   }
 
   return (
@@ -230,13 +281,19 @@ export default function SubjectsPage() {
                       )}
                     </div>
                     <div className="mt-4 flex space-x-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleEdit(subject)}
+                      >
                         編集
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         className="flex-1 text-red-600 hover:bg-red-50"
+                        onClick={() => handleDeleteClick(subject)}
                       >
                         削除
                       </Button>
@@ -267,8 +324,25 @@ export default function SubjectsPage() {
       {/* 科目追加モーダル */}
       <AddSubjectModal
         open={isAddModalOpen}
-        onOpenChange={handleModalClose}
+        onOpenChange={handleAddModalClose}
         userId={session?.user?.id || ""}
+      />
+
+      {/* 科目編集モーダル */}
+      <EditSubjectModal
+        open={isEditModalOpen}
+        onOpenChange={handleEditModalClose}
+        subject={selectedSubject}
+      />
+
+      {/* 削除確認ダイアログ */}
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="科目を削除しますか？"
+        description={`「${selectedSubject?.name || ""}」を削除します。この操作は取り消せません。本当に削除してもよろしいですか？`}
+        isDeleting={isDeleting}
       />
     </div>
   )

@@ -1,0 +1,343 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { updateSubject } from "@/app/actions/subjects"
+
+interface EditSubjectModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  subject: {
+    id: string
+    name: string
+    teacher: string | null
+    classroom: string | null
+    dayOfWeek: number
+    period: number
+    startTime: string | null
+    endTime: string | null
+    color: string
+  } | null
+}
+
+const weekDays = [
+  { value: 1, label: "月曜日" },
+  { value: 2, label: "火曜日" },
+  { value: 3, label: "水曜日" },
+  { value: 4, label: "木曜日" },
+  { value: 5, label: "金曜日" },
+  { value: 6, label: "土曜日" },
+  { value: 0, label: "日曜日" },
+]
+
+const periods = [
+  { value: 1, label: "1限" },
+  { value: 2, label: "2限" },
+  { value: 3, label: "3限" },
+  { value: 4, label: "4限" },
+  { value: 5, label: "5限" },
+  { value: 6, label: "6限" },
+  { value: 7, label: "7限" },
+]
+
+const predefinedColors = [
+  { value: "#3B82F6", label: "青" },
+  { value: "#10B981", label: "緑" },
+  { value: "#8B5CF6", label: "紫" },
+  { value: "#EC4899", label: "ピンク" },
+  { value: "#6366F1", label: "インディゴ" },
+  { value: "#F59E0B", label: "オレンジ" },
+  { value: "#EF4444", label: "赤" },
+  { value: "#14B8A6", label: "ティール" },
+]
+
+export function EditSubjectModal({
+  open,
+  onOpenChange,
+  subject,
+}: EditSubjectModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [formData, setFormData] = useState({
+    name: "",
+    teacher: "",
+    classroom: "",
+    dayOfWeek: "",
+    period: "",
+    startTime: "",
+    endTime: "",
+    color: "#3B82F6",
+  })
+
+  // subject が変更されたときにフォームデータを更新
+  useEffect(() => {
+    if (subject) {
+      setFormData({
+        name: subject.name,
+        teacher: subject.teacher || "",
+        classroom: subject.classroom || "",
+        dayOfWeek: String(subject.dayOfWeek),
+        period: String(subject.period),
+        startTime: subject.startTime || "",
+        endTime: subject.endTime || "",
+        color: subject.color,
+      })
+    }
+  }, [subject])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!subject) return
+
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      // Validation
+      if (!formData.name.trim()) {
+        setError("科目名を入力してください")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!formData.dayOfWeek) {
+        setError("曜日を選択してください")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!formData.period) {
+        setError("時限を選択してください")
+        setIsSubmitting(false)
+        return
+      }
+
+      const result = await updateSubject({
+        id: subject.id,
+        name: formData.name,
+        teacher: formData.teacher || undefined,
+        classroom: formData.classroom || undefined,
+        dayOfWeek: parseInt(formData.dayOfWeek),
+        period: parseInt(formData.period),
+        startTime: formData.startTime || undefined,
+        endTime: formData.endTime || undefined,
+        color: formData.color,
+      })
+
+      if (result.success) {
+        onOpenChange(false)
+      } else {
+        setError(result.error || "科目の更新に失敗しました")
+      }
+    } catch (err) {
+      setError("エラーが発生しました")
+      console.error(err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (!subject) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>科目を編集</DialogTitle>
+          <DialogDescription>
+            科目の情報を編集します。変更を保存するには「更新」をクリックしてください。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            {/* 科目名 */}
+            <div className="grid gap-2">
+              <Label htmlFor="name">
+                科目名 <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="例: 数学I"
+                required
+              />
+            </div>
+
+            {/* 曜日と時限 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="dayOfWeek">
+                  曜日 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.dayOfWeek}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, dayOfWeek: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="曜日を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {weekDays.map((day) => (
+                      <SelectItem key={day.value} value={String(day.value)}>
+                        {day.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="period">
+                  時限 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.period}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, period: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="時限を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periods.map((period) => (
+                      <SelectItem key={period.value} value={String(period.value)}>
+                        {period.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 開始・終了時刻 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="startTime">開始時刻</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={formData.startTime}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startTime: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="endTime">終了時刻</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endTime: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* 担当教員 */}
+            <div className="grid gap-2">
+              <Label htmlFor="teacher">担当教員</Label>
+              <Input
+                id="teacher"
+                value={formData.teacher}
+                onChange={(e) =>
+                  setFormData({ ...formData, teacher: e.target.value })
+                }
+                placeholder="例: 佐藤先生"
+              />
+            </div>
+
+            {/* 教室 */}
+            <div className="grid gap-2">
+              <Label htmlFor="classroom">教室</Label>
+              <Input
+                id="classroom"
+                value={formData.classroom}
+                onChange={(e) =>
+                  setFormData({ ...formData, classroom: e.target.value })
+                }
+                placeholder="例: A棟301"
+              />
+            </div>
+
+            {/* カラー選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="color">カラー</Label>
+              <Select
+                value={formData.color}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, color: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {predefinedColors.map((color) => (
+                    <SelectItem key={color.value} value={color.value}>
+                      <div className="flex items-center">
+                        <div
+                          className="w-4 h-4 rounded mr-2"
+                          style={{ backgroundColor: color.value }}
+                        />
+                        {color.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* エラーメッセージ */}
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              キャンセル
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "更新中..." : "更新"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
