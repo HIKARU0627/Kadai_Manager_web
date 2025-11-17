@@ -5,7 +5,8 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
+import { AddEventModal } from "@/components/modals/AddEventModal"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react"
 import {
   format,
   startOfMonth,
@@ -77,6 +78,7 @@ const events = [
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date(2025, 10, 17))
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
@@ -191,6 +193,13 @@ export default function CalendarPage() {
           <div className="flex items-center space-x-4">
             <Button variant="outline" onClick={() => setCurrentMonth(new Date())}>
               今日
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              予定を追加
             </Button>
           </div>
         </div>
@@ -357,6 +366,13 @@ export default function CalendarPage() {
           </div>
         </div>
       </main>
+
+      {/* 予定追加モーダル */}
+      <AddEventModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        userId="mock-user-id"
+      />
     </div>
   )
 }

@@ -5,9 +5,18 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { AddTaskModal } from "@/components/modals/AddTaskModal"
 import { Clock, Paperclip, Plus, Search, Edit } from "lucide-react"
 
 // モックデータ
+const mockSubjects = [
+  { id: "1", name: "数学I", color: "#3B82F6" },
+  { id: "2", name: "英語会話", color: "#10B981" },
+  { id: "3", name: "プログラミング基礎", color: "#8B5CF6" },
+  { id: "4", name: "日本史", color: "#6366F1" },
+  { id: "5", name: "物理学", color: "#EC4899" },
+]
+
 const mockTasks = [
   {
     id: "1",
@@ -88,6 +97,7 @@ const statusLabels = {
 export default function TasksPage() {
   const [activeTab, setActiveTab] = useState("not_started")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   const getPriorityColor = (priority: number) => {
     const colors = {
@@ -109,7 +119,10 @@ export default function TasksPage() {
             <h2 className="text-3xl font-bold text-gray-800">課題一覧</h2>
             <p className="text-gray-600 mt-2">すべての課題を管理</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setIsAddModalOpen(true)}
+          >
             <Plus className="w-5 h-5 mr-2" />
             新規課題を追加
           </Button>
@@ -247,6 +260,14 @@ export default function TasksPage() {
           </nav>
         </div>
       </main>
+
+      {/* 課題追加モーダル */}
+      <AddTaskModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        subjects={mockSubjects}
+        userId="mock-user-id"
+      />
     </div>
   )
 }

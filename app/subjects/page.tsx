@@ -1,6 +1,10 @@
+"use client"
+
+import { useState } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { AddSubjectModal } from "@/components/modals/AddSubjectModal"
 import { Plus, Clock, MapPin, User } from "lucide-react"
 
 // モックデータ
@@ -93,6 +97,8 @@ const schedule = {
 }
 
 export default function SubjectsPage() {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
@@ -104,7 +110,10 @@ export default function SubjectsPage() {
             <h2 className="text-3xl font-bold text-gray-800">時間割</h2>
             <p className="text-gray-600 mt-2">週間スケジュール</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setIsAddModalOpen(true)}
+          >
             <Plus className="w-5 h-5 mr-2" />
             科目を追加
           </Button>
@@ -243,6 +252,13 @@ export default function SubjectsPage() {
           </div>
         </div>
       </main>
+
+      {/* 科目追加モーダル */}
+      <AddSubjectModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        userId="mock-user-id"
+      />
     </div>
   )
 }

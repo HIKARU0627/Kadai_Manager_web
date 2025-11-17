@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { AddNoteModal } from "@/components/modals/AddNoteModal"
 import { Plus, Search, FileText, AlertCircle, Calendar } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
@@ -83,6 +84,14 @@ const subjects = [
   { name: "日本史", color: "#6366F1" },
 ]
 
+const mockSubjects = [
+  { id: "1", name: "数学I", color: "#3B82F6" },
+  { id: "2", name: "英語会話", color: "#10B981" },
+  { id: "3", name: "プログラミング基礎", color: "#8B5CF6" },
+  { id: "4", name: "物理学", color: "#EC4899" },
+  { id: "5", name: "日本史", color: "#6366F1" },
+]
+
 const noteTypes = [
   { id: "all", label: "すべて", icon: FileText },
   { id: "general", label: "一般", icon: FileText },
@@ -94,6 +103,7 @@ export default function NotesPage() {
   const [selectedSubject, setSelectedSubject] = useState("すべて")
   const [selectedNoteType, setSelectedNoteType] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   const filteredNotes = mockNotes.filter((note) => {
     const matchesSubject =
@@ -144,7 +154,10 @@ export default function NotesPage() {
               授業の重要事項、小テスト日程、連絡事項を管理
             </p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setIsAddModalOpen(true)}
+          >
             <Plus className="w-5 h-5 mr-2" />
             新規メモを追加
           </Button>
@@ -335,6 +348,14 @@ export default function NotesPage() {
           </div>
         </div>
       </main>
+
+      {/* メモ追加モーダル */}
+      <AddNoteModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        subjects={mockSubjects}
+        userId="mock-user-id"
+      />
     </div>
   )
 }
