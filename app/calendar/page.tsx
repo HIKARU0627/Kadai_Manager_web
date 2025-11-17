@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -22,70 +22,114 @@ import {
   isToday,
 } from "date-fns"
 import { ja } from "date-fns/locale"
+import { getMonthlyEvents } from "@/app/actions/events"
+import { getTasks } from "@/app/actions/tasks"
+import { getNotes } from "@/app/actions/notes"
 
-// モックデータ
-const events = [
-  {
-    id: "1",
-    title: "レポート: 微分積分の応用",
-    date: new Date(2025, 10, 17),
-    type: "task",
-    color: "#EF4444",
-  },
-  {
-    id: "2",
-    title: "課題: 英作文エッセイ",
-    date: new Date(2025, 10, 17),
-    type: "task",
-    color: "#EF4444",
-  },
-  {
-    id: "3",
-    title: "図書館で自習",
-    date: new Date(2025, 10, 17),
-    type: "event",
-    color: "#10B981",
-  },
-  {
-    id: "4",
-    title: "課題: Pythonプログラム作成",
-    date: new Date(2025, 10, 20),
-    type: "task",
-    color: "#F59E0B",
-  },
-  {
-    id: "5",
-    title: "小テスト: 数学I",
-    date: new Date(2025, 10, 22),
-    type: "quiz",
-    color: "#8B5CF6",
-  },
-  {
-    id: "6",
-    title: "レポート: 江戸時代の経済",
-    date: new Date(2025, 10, 25),
-    type: "task",
-    color: "#F59E0B",
-  },
-  {
-    id: "7",
-    title: "実験レポート: 力学実験",
-    date: new Date(2025, 10, 30),
-    type: "task",
-    color: "#F59E0B",
-  },
-]
+interface CalendarEvent {
+  id: string
+  title: string
+  date: Date
+  type: "task" | "event" | "quiz"
+  color: string
+  status?: string
+}
 
 export default function CalendarPage() {
   const { data: session } = useSession()
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 10, 17))
+  const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
   const startDate = startOfWeek(monthStart, { locale: ja })
   const endDate = endOfWeek(monthEnd, { locale: ja })
+
+  // データの取得
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!session?.user?.id) return
+
+      setIsLoading(true)
+      const year = currentMonth.getFullYear()
+      const month = currentMonth.getMonth()
+
+      const [eventsResult, tasksResult, notesResult] = await Promise.all([
+        getMonthlyEvents(session.user.id, year, month),
+        getTasks(session.user.id, {}),
+        getNotes(session.user.id, { noteType: "quiz" }),
+      ])
+
+      const calendarEvents: CalendarEvent[] = []
+
+      // 予定を追加
+      if (eventsResult.success) {
+        eventsResult.data.forEach((event: any) => {
+          calendarEvents.push({
+            id: event.id,
+            title: event.title,
+            date: new Date(event.startDatetime),
+            type: "event",
+            color: event.color || "#10B981",
+          })
+        })
+      }
+
+      // 課題を追加
+      if (tasksResult.success) {
+        tasksResult.data.forEach((task: any) => {
+          if (task.dueDate) {
+            const dueDate = new Date(task.dueDate)
+            const taskMonth = dueDate.getMonth()
+            const taskYear = dueDate.getFullYear()
+
+            // 現在の月のタスクのみ追加
+            if (taskYear === year && taskMonth === month) {
+              const isToday = isSameDay(dueDate, new Date())
+              calendarEvents.push({
+                id: task.id,
+                title: task.title,
+                date: dueDate,
+                type: "task",
+                color: isToday ? "#EF4444" : "#F59E0B",
+                status: task.status,
+              })
+            }
+          }
+        })
+      }
+
+      // 小テストを追加
+      if (notesResult.success) {
+        notesResult.data.forEach((note: any) => {
+          if (note.quizDate) {
+            const quizDate = new Date(note.quizDate)
+            const quizMonth = quizDate.getMonth()
+            const quizYear = quizDate.getFullYear()
+
+            // 現在の月の小テストのみ追加
+            if (quizYear === year && quizMonth === month) {
+              calendarEvents.push({
+                id: note.id,
+                title: note.title || `小テスト: ${note.subject?.name || ""}`,
+                date: quizDate,
+                type: "quiz",
+                color: "#8B5CF6",
+              })
+            }
+          }
+        })
+      }
+
+      setEvents(calendarEvents)
+      setIsLoading(false)
+    }
+
+    fetchData()
+  }, [session?.user?.id, currentMonth])
 
   const handlePreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1))
@@ -101,6 +145,80 @@ export default function CalendarPage() {
 
   const getEventsForDate = (date: Date) => {
     return events.filter((event) => isSameDay(event.date, date))
+  }
+
+  // モーダル閉じた時にデータを再取得
+  const handleModalClose = async (open: boolean) => {
+    setIsAddModalOpen(open)
+    if (!open && session?.user?.id) {
+      // データを再フェッチ
+      const year = currentMonth.getFullYear()
+      const month = currentMonth.getMonth()
+
+      const [eventsResult, tasksResult, notesResult] = await Promise.all([
+        getMonthlyEvents(session.user.id, year, month),
+        getTasks(session.user.id, {}),
+        getNotes(session.user.id, { noteType: "quiz" }),
+      ])
+
+      const calendarEvents: CalendarEvent[] = []
+
+      if (eventsResult.success) {
+        eventsResult.data.forEach((event: any) => {
+          calendarEvents.push({
+            id: event.id,
+            title: event.title,
+            date: new Date(event.startDatetime),
+            type: "event",
+            color: event.color || "#10B981",
+          })
+        })
+      }
+
+      if (tasksResult.success) {
+        tasksResult.data.forEach((task: any) => {
+          if (task.dueDate) {
+            const dueDate = new Date(task.dueDate)
+            const taskMonth = dueDate.getMonth()
+            const taskYear = dueDate.getFullYear()
+
+            if (taskYear === year && taskMonth === month) {
+              const isToday = isSameDay(dueDate, new Date())
+              calendarEvents.push({
+                id: task.id,
+                title: task.title,
+                date: dueDate,
+                type: "task",
+                color: isToday ? "#EF4444" : "#F59E0B",
+                status: task.status,
+              })
+            }
+          }
+        })
+      }
+
+      if (notesResult.success) {
+        notesResult.data.forEach((note: any) => {
+          if (note.quizDate) {
+            const quizDate = new Date(note.quizDate)
+            const quizMonth = quizDate.getMonth()
+            const quizYear = quizDate.getFullYear()
+
+            if (quizYear === year && quizMonth === month) {
+              calendarEvents.push({
+                id: note.id,
+                title: note.title || `小テスト: ${note.subject?.name || ""}`,
+                date: quizDate,
+                type: "quiz",
+                color: "#8B5CF6",
+              })
+            }
+          }
+        })
+      }
+
+      setEvents(calendarEvents)
+    }
   }
 
   const renderCalendar = () => {
@@ -372,7 +490,7 @@ export default function CalendarPage() {
       {/* 予定追加モーダル */}
       <AddEventModal
         open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
+        onOpenChange={handleModalClose}
         userId={session?.user?.id || ""}
       />
     </div>

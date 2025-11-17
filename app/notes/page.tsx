@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,88 +10,8 @@ import { AddNoteModal } from "@/components/modals/AddNoteModal"
 import { Plus, Search, FileText, AlertCircle, Calendar } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
-
-// モックデータ
-const mockNotes = [
-  {
-    id: "1",
-    title: "第5回講義の重要ポイント",
-    content:
-      "微分積分の応用について。ロピタルの定理を使った極限の計算が試験に出る予定。次回までに練習問題1-10を解いてくること。",
-    subject: "数学I",
-    subjectColor: "#3B82F6",
-    noteType: "general",
-    createdAt: new Date(2025, 10, 15),
-  },
-  {
-    id: "2",
-    title: "小テスト日程",
-    content: "11月22日（金）に第1章〜第3章の範囲で小テストを実施します。",
-    subject: "数学I",
-    subjectColor: "#3B82F6",
-    noteType: "quiz",
-    quizDate: new Date(2025, 10, 22),
-    createdAt: new Date(2025, 10, 14),
-  },
-  {
-    id: "3",
-    title: "プレゼンテーション課題について",
-    content:
-      "最終課題として、グループプレゼンテーションを実施します。テーマは自由。発表時間は10分、質疑応答5分。",
-    subject: "英語会話",
-    subjectColor: "#10B981",
-    noteType: "announcement",
-    createdAt: new Date(2025, 10, 16),
-  },
-  {
-    id: "4",
-    title: "アルゴリズムの計算量",
-    content:
-      "O(n), O(n²), O(log n)の違いについて復習。バブルソートとクイックソートの比較を理解すること。",
-    subject: "プログラミング基礎",
-    subjectColor: "#8B5CF6",
-    noteType: "general",
-    createdAt: new Date(2025, 10, 17),
-  },
-  {
-    id: "5",
-    title: "次回の実験について",
-    content:
-      "次回は振り子の周期測定実験を行います。実験ノート、筆記用具、関数電卓を持参してください。",
-    subject: "物理学",
-    subjectColor: "#EC4899",
-    noteType: "announcement",
-    createdAt: new Date(2025, 10, 16),
-  },
-  {
-    id: "6",
-    title: "中間テスト日程",
-    content:
-      "12月5日（木）に中間テストを実施します。範囲は江戸時代〜明治時代まで。",
-    subject: "日本史",
-    subjectColor: "#6366F1",
-    noteType: "quiz",
-    quizDate: new Date(2025, 11, 5),
-    createdAt: new Date(2025, 10, 15),
-  },
-]
-
-const subjects = [
-  { name: "すべて", color: "#6B7280" },
-  { name: "数学I", color: "#3B82F6" },
-  { name: "英語会話", color: "#10B981" },
-  { name: "プログラミング基礎", color: "#8B5CF6" },
-  { name: "物理学", color: "#EC4899" },
-  { name: "日本史", color: "#6366F1" },
-]
-
-const mockSubjects = [
-  { id: "1", name: "数学I", color: "#3B82F6" },
-  { id: "2", name: "英語会話", color: "#10B981" },
-  { id: "3", name: "プログラミング基礎", color: "#8B5CF6" },
-  { id: "4", name: "物理学", color: "#EC4899" },
-  { id: "5", name: "日本史", color: "#6366F1" },
-]
+import { getNotes, type NoteType } from "@/app/actions/notes"
+import { getSubjects } from "@/app/actions/subjects"
 
 const noteTypes = [
   { id: "all", label: "すべて", icon: FileText },
@@ -100,24 +20,79 @@ const noteTypes = [
   { id: "announcement", label: "お知らせ", icon: Calendar },
 ]
 
+interface Note {
+  id: string
+  title: string | null
+  content: string
+  noteType: string
+  quizDate: Date | null
+  createdAt: Date
+  subject: {
+    id: string
+    name: string
+    color: string
+  }
+}
+
+interface Subject {
+  id: string
+  name: string
+  color: string
+}
+
 export default function NotesPage() {
   const { data: session } = useSession()
   const [selectedSubject, setSelectedSubject] = useState("すべて")
   const [selectedNoteType, setSelectedNoteType] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const filteredNotes = mockNotes.filter((note) => {
+  // データの取得
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!session?.user?.id) return
+
+      setIsLoading(true)
+      const [notesResult, subjectsResult] = await Promise.all([
+        getNotes(session.user.id, {}),
+        getSubjects(session.user.id),
+      ])
+
+      if (notesResult.success) {
+        setNotes(notesResult.data as Note[])
+      }
+
+      if (subjectsResult.success) {
+        setSubjects(subjectsResult.data)
+      }
+
+      setIsLoading(false)
+    }
+
+    fetchData()
+  }, [session?.user?.id])
+
+  // フィルタリングされたノート
+  const filteredNotes = notes.filter((note) => {
     const matchesSubject =
-      selectedSubject === "すべて" || note.subject === selectedSubject
+      selectedSubject === "すべて" || note.subject?.name === selectedSubject
     const matchesType =
       selectedNoteType === "all" || note.noteType === selectedNoteType
     const matchesSearch =
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (note.title?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
       note.content.toLowerCase().includes(searchQuery.toLowerCase())
 
     return matchesSubject && matchesType && matchesSearch
   })
+
+  // 科目リスト（すべてを含む）
+  const subjectFilters = [
+    { name: "すべて", color: "#6B7280" },
+    ...subjects,
+  ]
 
   const getNoteTypeLabel = (type: string) => {
     switch (type) {
@@ -140,6 +115,25 @@ export default function NotesPage() {
         return "bg-blue-100 text-blue-700"
       default:
         return "bg-gray-100 text-gray-700"
+    }
+  }
+
+  // モーダル閉じた時にデータを再取得
+  const handleModalClose = async (open: boolean) => {
+    setIsAddModalOpen(open)
+    if (!open && session?.user?.id) {
+      const [notesResult, subjectsResult] = await Promise.all([
+        getNotes(session.user.id, {}),
+        getSubjects(session.user.id),
+      ])
+
+      if (notesResult.success) {
+        setNotes(notesResult.data as Note[])
+      }
+
+      if (subjectsResult.success) {
+        setSubjects(subjectsResult.data)
+      }
     }
   }
 
@@ -175,7 +169,7 @@ export default function NotesPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {subjects.map((subject) => (
+                  {subjectFilters.map((subject) => (
                     <button
                       key={subject.name}
                       onClick={() => setSelectedSubject(subject.name)}
@@ -236,23 +230,19 @@ export default function NotesPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">総メモ数</span>
                     <Badge className="bg-blue-100 text-blue-600">
-                      {mockNotes.length}件
+                      {notes.length}件
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">小テスト</span>
                     <Badge className="bg-red-100 text-red-600">
-                      {mockNotes.filter((n) => n.noteType === "quiz").length}件
+                      {notes.filter((n) => n.noteType === "quiz").length}件
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">お知らせ</span>
                     <Badge className="bg-blue-100 text-blue-600">
-                      {
-                        mockNotes.filter((n) => n.noteType === "announcement")
-                          .length
-                      }
-                      件
+                      {notes.filter((n) => n.noteType === "announcement").length}件
                     </Badge>
                   </div>
                 </div>
@@ -278,35 +268,39 @@ export default function NotesPage() {
 
             {/* メモカード */}
             <div className="space-y-4">
-              {filteredNotes.length > 0 ? (
+              {isLoading ? (
+                <div className="text-center py-12 text-gray-500">
+                  読み込み中...
+                </div>
+              ) : filteredNotes.length > 0 ? (
                 filteredNotes.map((note) => (
                   <Card
                     key={note.id}
                     className="hover:shadow-md transition border-l-4"
-                    style={{ borderLeftColor: note.subjectColor }}
+                    style={{ borderLeftColor: note.subject?.color || "#6B7280" }}
                   >
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center space-x-2">
                           <Badge
                             style={{
-                              backgroundColor: `${note.subjectColor}20`,
-                              color: note.subjectColor,
+                              backgroundColor: `${note.subject?.color || "#6B7280"}20`,
+                              color: note.subject?.color || "#6B7280",
                             }}
                           >
-                            {note.subject}
+                            {note.subject?.name || "不明"}
                           </Badge>
                           <Badge className={getNoteTypeColor(note.noteType)}>
                             {getNoteTypeLabel(note.noteType)}
                           </Badge>
                         </div>
                         <span className="text-sm text-gray-500">
-                          {format(note.createdAt, "yyyy/MM/dd", { locale: ja })}
+                          {format(new Date(note.createdAt), "yyyy/MM/dd", { locale: ja })}
                         </span>
                       </div>
 
                       <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                        {note.title}
+                        {note.title || "無題"}
                       </h3>
 
                       <p className="text-gray-600 mb-3">{note.content}</p>
@@ -315,7 +309,7 @@ export default function NotesPage() {
                         <div className="flex items-center text-sm text-red-600 bg-red-50 p-2 rounded">
                           <Calendar className="w-4 h-4 mr-2" />
                           小テスト日程:{" "}
-                          {format(note.quizDate, "yyyy年MM月dd日（E）", {
+                          {format(new Date(note.quizDate), "yyyy年MM月dd日（E）", {
                             locale: ja,
                           })}
                         </div>
@@ -341,8 +335,19 @@ export default function NotesPage() {
                   <CardContent className="p-12 text-center">
                     <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">
-                      メモが見つかりませんでした
+                      {notes.length === 0
+                        ? "メモがまだありません"
+                        : "条件に一致するメモが見つかりませんでした"}
                     </p>
+                    {notes.length === 0 && (
+                      <Button
+                        className="mt-4 bg-blue-600 hover:bg-blue-700"
+                        onClick={() => setIsAddModalOpen(true)}
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        最初のメモを追加
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -354,8 +359,8 @@ export default function NotesPage() {
       {/* メモ追加モーダル */}
       <AddNoteModal
         open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        subjects={mockSubjects}
+        onOpenChange={handleModalClose}
+        subjects={subjects}
         userId={session?.user?.id || ""}
       />
     </div>
