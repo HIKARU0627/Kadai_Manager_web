@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AddSubjectModal } from "@/components/modals/AddSubjectModal"
 import { EditSubjectModal } from "@/components/modals/EditSubjectModal"
+import { SubjectDetailModal } from "@/components/modals/SubjectDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
-import { Plus, Clock, MapPin, User } from "lucide-react"
+import { Plus, Clock, MapPin, User, FileText } from "lucide-react"
 import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
 
 const weekDays = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日"]
@@ -36,6 +37,7 @@ export default function SubjectsPage() {
   const { data: session } = useSession()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
@@ -107,6 +109,12 @@ export default function SubjectsPage() {
       await fetchScheduleData()
       setSelectedSubject(null)
     }
+  }
+
+  // 詳細表示のハンドラー
+  const handleViewDetail = (subject: Subject) => {
+    setSelectedSubject(subject)
+    setIsDetailModalOpen(true)
   }
 
   // 編集ボタンのハンドラー
@@ -208,6 +216,7 @@ export default function SubjectsPage() {
                                   backgroundColor: `${subject.color}15`,
                                   borderLeft: `4px solid ${subject.color}`,
                                 }}
+                                onClick={() => handleViewDetail(subject)}
                               >
                                 <p className="font-semibold text-gray-800">
                                   {subject.name}
@@ -297,6 +306,16 @@ export default function SubjectsPage() {
                         variant="outline"
                         size="sm"
                         className="flex-1"
+                        onClick={() => handleViewDetail(subject)}
+                        title="ファイル管理"
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        ファイル
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
                         onClick={() => handleEdit(subject)}
                       >
                         編集
@@ -345,6 +364,14 @@ export default function SubjectsPage() {
         open={isEditModalOpen}
         onOpenChange={handleEditModalClose}
         subject={selectedSubject}
+      />
+
+      {/* 科目詳細モーダル */}
+      <SubjectDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+        subject={selectedSubject}
+        userId={session?.user?.id || ""}
       />
 
       {/* 削除確認ダイアログ */}
