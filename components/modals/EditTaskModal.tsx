@@ -49,7 +49,7 @@ export function EditTaskModal({
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    subjectId: "",
+    subjectId: "none",
     dueDate: "",
     priority: "0",
     status: "not_started",
@@ -70,7 +70,7 @@ export function EditTaskModal({
       setFormData({
         title: task.title,
         description: task.description || "",
-        subjectId: task.subjectId || "",
+        subjectId: task.subjectId || "none",
         dueDate: formattedDueDate,
         priority: String(task.priority),
         status: task.status,
@@ -103,7 +103,7 @@ export function EditTaskModal({
         id: task.id,
         title: formData.title,
         description: formData.description || undefined,
-        subjectId: formData.subjectId || undefined,
+        subjectId: formData.subjectId === "none" ? undefined : formData.subjectId,
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
         status: formData.status as "not_started" | "in_progress" | "completed",
@@ -179,7 +179,7 @@ export function EditTaskModal({
                   <SelectValue placeholder="科目を選択（任意）" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">科目なし</SelectItem>
+                  <SelectItem value="none">科目なし</SelectItem>
                   {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name}

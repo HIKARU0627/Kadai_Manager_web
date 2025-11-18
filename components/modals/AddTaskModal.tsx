@@ -44,7 +44,7 @@ export function AddTaskModal({
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    subjectId: "",
+    subjectId: "none",
     dueDate: "",
     priority: "0",
   })
@@ -99,7 +99,7 @@ export function AddTaskModal({
         userId,
         title: formData.title,
         description: formData.description || undefined,
-        subjectId: formData.subjectId || undefined,
+        subjectId: formData.subjectId === "none" ? undefined : formData.subjectId,
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
       })
@@ -136,7 +136,7 @@ export function AddTaskModal({
         setFormData({
           title: "",
           description: "",
-          subjectId: "",
+          subjectId: "none",
           dueDate: "",
           priority: "0",
         })
@@ -209,7 +209,7 @@ export function AddTaskModal({
                   <SelectValue placeholder="科目を選択（任意）" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">科目なし</SelectItem>
+                  <SelectItem value="none">科目なし</SelectItem>
                   {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name}
