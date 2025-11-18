@@ -42,7 +42,7 @@ export async function registerUser(data: RegisterUserInput) {
       data: {
         username: data.username.trim(),
         email: data.email.toLowerCase().trim(),
-        password: hashedPassword,
+        passwordHash: hashedPassword,
       },
     })
 
