@@ -1,8 +1,6 @@
 "use client"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { X } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import Image from "next/image"
 
 interface FilePreviewDialogProps {
@@ -30,17 +28,7 @@ export function FilePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[90vw] max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{file.fileName}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="h-6 w-6"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>{file.fileName}</DialogTitle>
         </DialogHeader>
 
         <div className="mt-4">
