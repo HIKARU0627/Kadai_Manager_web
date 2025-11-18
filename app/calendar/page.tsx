@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddEventModal } from "@/components/modals/AddEventModal"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react"
+import { EditEventModal } from "@/components/modals/EditEventModal"
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Edit, Trash2 } from "lucide-react"
 import {
   format,
   startOfMonth,
@@ -22,7 +24,7 @@ import {
   isToday,
 } from "date-fns"
 import { ja } from "date-fns/locale"
-import { getMonthlyEvents } from "@/app/actions/events"
+import { getMonthlyEvents, deleteEvent } from "@/app/actions/events"
 import { getTasks } from "@/app/actions/tasks"
 import { getNotes } from "@/app/actions/notes"
 
@@ -33,6 +35,10 @@ interface CalendarEvent {
   type: "task" | "event" | "quiz"
   color: string
   status?: string
+  description?: string | null
+  startDatetime?: Date
+  endDatetime?: Date
+  location?: string | null
 }
 
 export default function CalendarPage() {
@@ -40,8 +46,12 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
@@ -74,6 +84,10 @@ export default function CalendarPage() {
             date: new Date(event.startDatetime),
             type: "event",
             color: event.color || "#10B981",
+            description: event.description,
+            startDatetime: new Date(event.startDatetime),
+            endDatetime: new Date(event.endDatetime),
+            location: event.location,
           })
         })
       }
@@ -171,6 +185,10 @@ export default function CalendarPage() {
             date: new Date(event.startDatetime),
             type: "event",
             color: event.color || "#10B981",
+            description: event.description,
+            startDatetime: new Date(event.startDatetime),
+            endDatetime: new Date(event.endDatetime),
+            location: event.location,
           })
         })
       }
@@ -219,6 +237,49 @@ export default function CalendarPage() {
 
       setEvents(calendarEvents)
     }
+  }
+
+  // 編集モーダル閉じた時にデータを再取得
+  const handleEditModalClose = async (open: boolean) => {
+    setIsEditModalOpen(open)
+    if (!open && session?.user?.id) {
+      await handleModalClose(false)
+      setSelectedEvent(null)
+    }
+  }
+
+  // 編集ボタンのハンドラー（予定のみ）
+  const handleEdit = (event: CalendarEvent) => {
+    if (event.type === "event" && event.startDatetime && event.endDatetime) {
+      setSelectedEvent(event)
+      setIsEditModalOpen(true)
+    }
+  }
+
+  // 削除ボタンのハンドラー（予定のみ）
+  const handleDeleteClick = (event: CalendarEvent) => {
+    if (event.type === "event") {
+      setSelectedEvent(event)
+      setIsDeleteDialogOpen(true)
+    }
+  }
+
+  // 削除確認のハンドラー
+  const handleDeleteConfirm = async () => {
+    if (!selectedEvent || selectedEvent.type !== "event") return
+
+    setIsDeleting(true)
+    const result = await deleteEvent(selectedEvent.id)
+
+    if (result.success) {
+      setIsDeleteDialogOpen(false)
+      setSelectedEvent(null)
+      await handleModalClose(false)
+    } else {
+      alert(result.error || "削除に失敗しました")
+    }
+
+    setIsDeleting(false)
   }
 
   const renderCalendar = () => {
@@ -427,19 +488,40 @@ export default function CalendarPage() {
                         <p className="font-semibold text-gray-800 text-sm">
                           {event.title}
                         </p>
-                        <Badge
-                          className="mt-2"
-                          style={{
-                            backgroundColor: `${event.color}20`,
-                            color: event.color,
-                          }}
-                        >
-                          {event.type === "task"
-                            ? "課題"
-                            : event.type === "quiz"
-                            ? "小テスト"
-                            : "予定"}
-                        </Badge>
+                        <div className="flex justify-between items-center mt-2">
+                          <Badge
+                            style={{
+                              backgroundColor: `${event.color}20`,
+                              color: event.color,
+                            }}
+                          >
+                            {event.type === "task"
+                              ? "課題"
+                              : event.type === "quiz"
+                              ? "小テスト"
+                              : "予定"}
+                          </Badge>
+                          {event.type === "event" && (
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-gray-400 hover:text-blue-600"
+                                onClick={() => handleEdit(event)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-gray-400 hover:text-red-600"
+                                onClick={() => handleDeleteClick(event)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -492,6 +574,33 @@ export default function CalendarPage() {
         open={isAddModalOpen}
         onOpenChange={handleModalClose}
         userId={session?.user?.id || ""}
+      />
+
+      {/* 予定編集モーダル */}
+      {selectedEvent && selectedEvent.type === "event" && (
+        <EditEventModal
+          open={isEditModalOpen}
+          onOpenChange={handleEditModalClose}
+          event={selectedEvent.startDatetime && selectedEvent.endDatetime ? {
+            id: selectedEvent.id,
+            title: selectedEvent.title,
+            description: selectedEvent.description || null,
+            startDatetime: selectedEvent.startDatetime,
+            endDatetime: selectedEvent.endDatetime,
+            location: selectedEvent.location || null,
+            color: selectedEvent.color,
+          } : null}
+        />
+      )}
+
+      {/* 削除確認ダイアログ */}
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="予定を削除しますか？"
+        description={`「${selectedEvent?.title || ""}」を削除します。この操作は取り消せません。本当に削除してもよろしいですか？`}
+        isDeleting={isDeleting}
       />
     </div>
   )

@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddNoteModal } from "@/components/modals/AddNoteModal"
-import { Plus, Search, FileText, AlertCircle, Calendar } from "lucide-react"
+import { EditNoteModal } from "@/components/modals/EditNoteModal"
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import { Plus, Search, FileText, AlertCircle, Calendar, Edit, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
-import { getNotes, type NoteType } from "@/app/actions/notes"
+import { getNotes, deleteNote, type NoteType } from "@/app/actions/notes"
 import { getSubjects } from "@/app/actions/subjects"
 
 const noteTypes = [
@@ -46,9 +48,13 @@ export default function NotesPage() {
   const [selectedNoteType, setSelectedNoteType] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // データの取得
   useEffect(() => {
@@ -118,23 +124,72 @@ export default function NotesPage() {
     }
   }
 
-  // モーダル閉じた時にデータを再取得
+  // データ再取得の共通関数
+  const fetchNotesData = async () => {
+    if (!session?.user?.id) return
+
+    setIsLoading(true)
+    const [notesResult, subjectsResult] = await Promise.all([
+      getNotes(session.user.id, {}),
+      getSubjects(session.user.id),
+    ])
+
+    if (notesResult.success) {
+      setNotes(notesResult.data as Note[])
+    }
+
+    if (subjectsResult.success) {
+      setSubjects(subjectsResult.data)
+    }
+
+    setIsLoading(false)
+  }
+
+  // 追加モーダル閉じた時にデータを再取得
   const handleModalClose = async (open: boolean) => {
     setIsAddModalOpen(open)
-    if (!open && session?.user?.id) {
-      const [notesResult, subjectsResult] = await Promise.all([
-        getNotes(session.user.id, {}),
-        getSubjects(session.user.id),
-      ])
-
-      if (notesResult.success) {
-        setNotes(notesResult.data as Note[])
-      }
-
-      if (subjectsResult.success) {
-        setSubjects(subjectsResult.data)
-      }
+    if (!open) {
+      await fetchNotesData()
     }
+  }
+
+  // 編集モーダル閉じた時にデータを再取得
+  const handleEditModalClose = async (open: boolean) => {
+    setIsEditModalOpen(open)
+    if (!open) {
+      await fetchNotesData()
+      setSelectedNote(null)
+    }
+  }
+
+  // 編集ボタンのハンドラー
+  const handleEdit = (note: Note) => {
+    setSelectedNote(note)
+    setIsEditModalOpen(true)
+  }
+
+  // 削除ボタンのハンドラー
+  const handleDeleteClick = (note: Note) => {
+    setSelectedNote(note)
+    setIsDeleteDialogOpen(true)
+  }
+
+  // 削除確認のハンドラー
+  const handleDeleteConfirm = async () => {
+    if (!selectedNote) return
+
+    setIsDeleting(true)
+    const result = await deleteNote(selectedNote.id)
+
+    if (result.success) {
+      setIsDeleteDialogOpen(false)
+      setSelectedNote(null)
+      await fetchNotesData()
+    } else {
+      alert(result.error || "削除に失敗しました")
+    }
+
+    setIsDeleting(false)
   }
 
   return (
@@ -316,14 +371,21 @@ export default function NotesPage() {
                       )}
 
                       <div className="mt-4 flex space-x-2">
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(note)}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
                           編集
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteClick(note)}
                         >
+                          <Trash2 className="w-4 h-4 mr-1" />
                           削除
                         </Button>
                       </div>
@@ -362,6 +424,24 @@ export default function NotesPage() {
         onOpenChange={handleModalClose}
         subjects={subjects}
         userId={session?.user?.id || ""}
+      />
+
+      {/* メモ編集モーダル */}
+      <EditNoteModal
+        open={isEditModalOpen}
+        onOpenChange={handleEditModalClose}
+        subjects={subjects}
+        note={selectedNote}
+      />
+
+      {/* 削除確認ダイアログ */}
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="メモを削除しますか？"
+        description={`「${selectedNote?.title || "無題"}」を削除します。この操作は取り消せません。本当に削除してもよろしいですか？`}
+        isDeleting={isDeleting}
       />
     </div>
   )
