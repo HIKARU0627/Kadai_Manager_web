@@ -2,14 +2,17 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
 
 export function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const registered = searchParams.get("registered")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +84,12 @@ export function LoginForm() {
             />
           </div>
 
+          {registered && (
+            <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md">
+              登録が完了しました。ログインしてください。
+            </div>
+          )}
+
           {error && (
             <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
               {error}
@@ -97,7 +106,16 @@ export function LoginForm() {
         </form>
 
         <div className="mt-4 text-center text-sm text-gray-600">
-          <p>テストアカウント</p>
+          <p>
+            アカウントをお持ちでない方は{" "}
+            <Link href="/signup" className="text-blue-600 hover:underline">
+              新規登録
+            </Link>
+          </p>
+        </div>
+
+        <div className="mt-4 text-center text-sm text-gray-600 border-t pt-4">
+          <p className="font-medium">テストアカウント</p>
           <p className="text-xs text-gray-500 mt-1">
             Email: test@example.com / Password: password123
           </p>
