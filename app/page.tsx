@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 import { getTodaySubjects } from "@/app/actions/subjects"
 import { getTodayTasks } from "@/app/actions/tasks"
 import { getTodayEvents } from "@/app/actions/events"
+import Link from "next/link"
 
 const statusLabels = {
   not_started: "未着手",
@@ -210,18 +211,18 @@ export default async function DashboardPage() {
 
         {/* クイックアクション */}
         <div className="mt-8 flex space-x-4">
-          <Button className="bg-blue-600 hover:bg-blue-700" asChild>
-            <a href="/tasks">
+          <Link href="/tasks">
+            <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-5 h-5 mr-2" />
               新しい課題を追加
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href="/calendar">
+            </Button>
+          </Link>
+          <Link href="/calendar">
+            <Button variant="outline">
               <Plus className="w-5 h-5 mr-2" />
               予定を追加
-            </a>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </main>
     </div>
