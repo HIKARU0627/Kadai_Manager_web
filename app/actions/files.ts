@@ -119,6 +119,26 @@ export async function getFiles(userId: string, filters?: {
 
     const files = await prisma.file.findMany({
       where,
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        note: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        subject: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: "desc",
       },
