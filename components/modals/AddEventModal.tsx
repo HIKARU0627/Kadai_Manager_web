@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ interface AddEventModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   userId: string
+  initialDate?: Date
 }
 
 const predefinedColors = [
@@ -43,6 +44,7 @@ export function AddEventModal({
   open,
   onOpenChange,
   userId,
+  initialDate,
 }: AddEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +57,26 @@ export function AddEventModal({
     location: "",
     color: "#10B981",
   })
+
+  // initialDateが変更されたら、フォームを初期化
+  useEffect(() => {
+    if (initialDate && open) {
+      const year = initialDate.getFullYear()
+      const month = String(initialDate.getMonth() + 1).padStart(2, '0')
+      const day = String(initialDate.getDate()).padStart(2, '0')
+
+      // 開始時刻を9:00に設定
+      const startDatetime = `${year}-${month}-${day}T09:00`
+      // 終了時刻を10:00に設定
+      const endDatetime = `${year}-${month}-${day}T10:00`
+
+      setFormData(prev => ({
+        ...prev,
+        startDatetime,
+        endDatetime,
+      }))
+    }
+  }, [initialDate, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -52,6 +52,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [dateForNewEvent, setDateForNewEvent] = useState<Date | null>(null)
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
@@ -282,6 +283,12 @@ export default function CalendarPage() {
     setIsDeleting(false)
   }
 
+  // セルのダブルクリックハンドラー
+  const handleDateDoubleClick = (date: Date) => {
+    setDateForNewEvent(date)
+    setIsAddModalOpen(true)
+  }
+
   const renderCalendar = () => {
     const days = []
     let day = startDate
@@ -308,6 +315,7 @@ export default function CalendarPage() {
             <div
               key={dayIndex}
               onClick={() => handleDateClick(day)}
+              onDoubleClick={() => handleDateDoubleClick(day)}
               className={`min-h-24 p-2 border rounded-lg cursor-pointer transition ${
                 isCurrentMonth
                   ? "bg-white hover:bg-gray-50"
@@ -574,6 +582,7 @@ export default function CalendarPage() {
         open={isAddModalOpen}
         onOpenChange={handleModalClose}
         userId={session?.user?.id || ""}
+        initialDate={dateForNewEvent || undefined}
       />
 
       {/* 予定編集モーダル */}
