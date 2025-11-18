@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddTaskModal } from "@/components/modals/AddTaskModal"
 import { EditTaskModal } from "@/components/modals/EditTaskModal"
+import { TaskDetailModal } from "@/components/modals/TaskDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
 import { Clock, Paperclip, Plus, Search, Edit, Trash2 } from "lucide-react"
 import { getTasks, updateTask, deleteTask, TaskStatus } from "@/app/actions/tasks"
@@ -50,6 +51,7 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -146,6 +148,12 @@ export default function TasksPage() {
       await fetchTasksData()
       setSelectedTask(null)
     }
+  }
+
+  // 詳細表示ハンドラー
+  const handleViewDetail = (task: Task) => {
+    setSelectedTask(task)
+    setIsDetailModalOpen(true)
   }
 
   // 編集ボタンのハンドラー
@@ -315,7 +323,10 @@ export default function TasksPage() {
                         )}
                       </div>
 
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                      <h3
+                        className="text-xl font-semibold text-gray-800 mb-2 cursor-pointer hover:text-blue-600 transition"
+                        onClick={() => handleViewDetail(task)}
+                      >
                         {task.title}
                       </h3>
                       {task.description && (
@@ -401,6 +412,13 @@ export default function TasksPage() {
         open={isEditModalOpen}
         onOpenChange={handleEditModalClose}
         subjects={subjects}
+        task={selectedTask}
+      />
+
+      {/* 課題詳細モーダル */}
+      <TaskDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
         task={selectedTask}
       />
 

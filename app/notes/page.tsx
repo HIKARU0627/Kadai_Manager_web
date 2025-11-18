@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddNoteModal } from "@/components/modals/AddNoteModal"
 import { EditNoteModal } from "@/components/modals/EditNoteModal"
+import { NoteDetailModal } from "@/components/modals/NoteDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
 import { Plus, Search, FileText, AlertCircle, Calendar, Edit, Trash2 } from "lucide-react"
 import { format } from "date-fns"
@@ -49,6 +50,7 @@ export default function NotesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
@@ -160,6 +162,12 @@ export default function NotesPage() {
       await fetchNotesData()
       setSelectedNote(null)
     }
+  }
+
+  // 詳細表示ハンドラー
+  const handleViewDetail = (note: Note) => {
+    setSelectedNote(note)
+    setIsDetailModalOpen(true)
   }
 
   // 編集ボタンのハンドラー
@@ -354,11 +362,19 @@ export default function NotesPage() {
                         </span>
                       </div>
 
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                      <h3
+                        className="text-xl font-semibold text-gray-800 mb-2 cursor-pointer hover:text-blue-600 transition"
+                        onClick={() => handleViewDetail(note)}
+                      >
                         {note.title || "無題"}
                       </h3>
 
-                      <p className="text-gray-600 mb-3">{note.content}</p>
+                      <p
+                        className="text-gray-600 mb-3 cursor-pointer hover:text-gray-800 transition"
+                        onClick={() => handleViewDetail(note)}
+                      >
+                        {note.content}
+                      </p>
 
                       {note.quizDate && (
                         <div className="flex items-center text-sm text-red-600 bg-red-50 p-2 rounded">
@@ -431,6 +447,13 @@ export default function NotesPage() {
         open={isEditModalOpen}
         onOpenChange={handleEditModalClose}
         subjects={subjects}
+        note={selectedNote}
+      />
+
+      {/* メモ詳細モーダル */}
+      <NoteDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
         note={selectedNote}
       />
 
