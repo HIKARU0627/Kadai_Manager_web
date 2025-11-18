@@ -7,8 +7,10 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddTaskModal } from "@/components/modals/AddTaskModal"
-import { Clock, Paperclip, Plus, Search, Edit } from "lucide-react"
-import { getTasks, updateTask, TaskStatus } from "@/app/actions/tasks"
+import { EditTaskModal } from "@/components/modals/EditTaskModal"
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import { Clock, Paperclip, Plus, Search, Edit, Trash2 } from "lucide-react"
+import { getTasks, updateTask, deleteTask, TaskStatus } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
@@ -47,9 +49,13 @@ export default function TasksPage() {
   const [activeTab, setActiveTab] = useState<TaskStatus | "all">("not_started")
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // データを取得
   useEffect(() => {
@@ -82,6 +88,33 @@ export default function TasksPage() {
     fetchData()
   }, [session?.user?.id, activeTab, searchQuery])
 
+  // データ再取得の共通関数
+  const fetchTasksData = async () => {
+    if (!session?.user?.id) return
+
+    setIsLoading(true)
+    try {
+      const [tasksResult, subjectsResult] = await Promise.all([
+        getTasks(session.user.id, {
+          status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
+          search: searchQuery || undefined,
+        }),
+        getSubjects(session.user.id),
+      ])
+
+      if (tasksResult.success) {
+        setTasks(tasksResult.data as Task[])
+      }
+      if (subjectsResult.success) {
+        setSubjects(subjectsResult.data as Subject[])
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       const result = await updateTask({ id: taskId, status: newStatus })
@@ -96,6 +129,53 @@ export default function TasksPage() {
     } catch (error) {
       console.error("Failed to update task status:", error)
     }
+  }
+
+  // 追加モーダル閉じた時にデータを再取得
+  const handleAddModalClose = async (open: boolean) => {
+    setIsAddModalOpen(open)
+    if (!open) {
+      await fetchTasksData()
+    }
+  }
+
+  // 編集モーダル閉じた時にデータを再取得
+  const handleEditModalClose = async (open: boolean) => {
+    setIsEditModalOpen(open)
+    if (!open) {
+      await fetchTasksData()
+      setSelectedTask(null)
+    }
+  }
+
+  // 編集ボタンのハンドラー
+  const handleEdit = (task: Task) => {
+    setSelectedTask(task)
+    setIsEditModalOpen(true)
+  }
+
+  // 削除ボタンのハンドラー
+  const handleDeleteClick = (task: Task) => {
+    setSelectedTask(task)
+    setIsDeleteDialogOpen(true)
+  }
+
+  // 削除確認のハンドラー
+  const handleDeleteConfirm = async () => {
+    if (!selectedTask) return
+
+    setIsDeleting(true)
+    const result = await deleteTask(selectedTask.id)
+
+    if (result.success) {
+      setIsDeleteDialogOpen(false)
+      setSelectedTask(null)
+      await fetchTasksData()
+    } else {
+      alert(result.error || "削除に失敗しました")
+    }
+
+    setIsDeleting(false)
   }
 
   const getPriorityColor = (priority: number) => {
@@ -265,9 +345,9 @@ export default function TasksPage() {
                       </div>
                     </div>
 
-                    <div className="ml-6 flex flex-col items-end">
+                    <div className="ml-6 flex flex-col items-end space-y-2">
                       <select
-                        className="mb-3 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         value={task.status}
                         onChange={(e) =>
                           handleStatusChange(task.id, e.target.value as TaskStatus)
@@ -277,9 +357,24 @@ export default function TasksPage() {
                         <option value="in_progress">作業中</option>
                         <option value="completed">完了</option>
                       </select>
-                      <Button variant="ghost" size="icon" className="text-gray-400">
-                        <Edit className="w-5 h-5" />
-                      </Button>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-400 hover:text-blue-600"
+                          onClick={() => handleEdit(task)}
+                        >
+                          <Edit className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-400 hover:text-red-600"
+                          onClick={() => handleDeleteClick(task)}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -296,9 +391,27 @@ export default function TasksPage() {
       {/* 課題追加モーダル */}
       <AddTaskModal
         open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
+        onOpenChange={handleAddModalClose}
         subjects={subjects}
         userId={session.user.id}
+      />
+
+      {/* 課題編集モーダル */}
+      <EditTaskModal
+        open={isEditModalOpen}
+        onOpenChange={handleEditModalClose}
+        subjects={subjects}
+        task={selectedTask}
+      />
+
+      {/* 削除確認ダイアログ */}
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="課題を削除しますか？"
+        description={`「${selectedTask?.title || ""}」を削除します。この操作は取り消せません。本当に削除してもよろしいですか？`}
+        isDeleting={isDeleting}
       />
     </div>
   )
