@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { FilePreviewDialog } from "@/components/ui/file-preview-dialog"
 import { getNoteFiles, deleteFile } from "@/app/actions/files"
-import { FileIcon, Download, Trash2, Calendar } from "lucide-react"
+import { FileIcon, Download, Trash2, Calendar, Eye } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
 
@@ -51,6 +52,8 @@ export function NoteDetailModal({
   const [files, setFiles] = useState<FileItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -87,6 +90,11 @@ export function NoteDetailModal({
     link.href = fileUrl
     link.download = fileName
     link.click()
+  }
+
+  const handleFilePreview = (file: FileItem) => {
+    setPreviewFile(file)
+    setIsPreviewOpen(true)
   }
 
   const formatFileSize = (bytes: number | null) => {
@@ -200,12 +208,24 @@ export function NoteDetailModal({
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
+                      {file.fileUrl && (file.fileType?.startsWith("image/") || file.fileType === "application/pdf") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleFilePreview(file)}
+                          className="h-8 w-8 text-gray-400 hover:text-purple-600"
+                          title="プレビュー"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      )}
                       {file.fileUrl && (
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleFileDownload(file.fileUrl!, file.fileName)}
                           className="h-8 w-8 text-gray-400 hover:text-blue-600"
+                          title="ダウンロード"
                         >
                           <Download className="w-4 h-4" />
                         </Button>
@@ -216,6 +236,7 @@ export function NoteDetailModal({
                         onClick={() => handleFileDelete(file.id)}
                         disabled={isDeleting === file.id}
                         className="h-8 w-8 text-gray-400 hover:text-red-600"
+                        title="削除"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -235,6 +256,19 @@ export function NoteDetailModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* ファイルプレビュー */}
+      {previewFile && (
+        <FilePreviewDialog
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          file={{
+            fileName: previewFile.fileName,
+            fileUrl: previewFile.fileUrl || "",
+            fileType: previewFile.fileType,
+          }}
+        />
+      )}
     </Dialog>
   )
 }
