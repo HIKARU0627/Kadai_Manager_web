@@ -19,6 +19,11 @@
 - **ユーザー認証**: NextAuth.jsによるログイン/ログアウト機能、認証ベースのルート保護
 - **データベース統合**: ダッシュボードと課題ページで実データベースとの完全連携
 - **ファイルアップロードAPI**: ファイルアップロード用のAPIエンドポイントとUIコンポーネント
+- **🤖 AI機能**:
+  - ファイル要約生成（OpenAI GPT-4, Claude 3.5, Google Gemini対応）
+  - 課題からプログラミングコード生成
+  - ファイル内容の詳細分析
+  - 複数のAIプロバイダーから選択可能
 
 ### 🚧 今後の実装予定
 
@@ -36,6 +41,11 @@
 - **認証**: NextAuth.js v4
 - **データベース**: Prisma + SQLite (開発環境) / PostgreSQL (本番環境)
 - **パスワードハッシュ**: bcryptjs
+- **AI統合**:
+  - OpenAI GPT-4 API
+  - Anthropic Claude 3.5 API
+  - Google Gemini API
+  - Vercel AI SDK
 
 ## セットアップ
 
@@ -67,7 +77,19 @@ npm install
 DATABASE_URL="file:./dev.db"
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key-change-this-in-production
+
+# AI機能を使用する場合は、以下のAPIキーも設定してください
+OPENAI_API_KEY=sk-your-openai-api-key-here
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here
+GEMINI_API_KEY=your-gemini-api-key-here
 \`\`\`
+
+APIキーの取得方法：
+- **OpenAI**: https://platform.openai.com/api-keys
+- **Anthropic Claude**: https://console.anthropic.com/settings/keys
+- **Google Gemini**: https://makersuite.google.com/app/apikey
+
+注: AI機能を使用しない場合、APIキーの設定は不要です。
 
 4. データベースのセットアップ
 
@@ -107,15 +129,21 @@ Kadai_Manager_web/
 │   │   ├── notes.ts      # 授業メモCRUD
 │   │   ├── files.ts      # ファイルCRUD
 │   │   └── reminders.ts  # リマインダーCRUD
+│   ├── api/              # APIルート
+│   │   └── ai/           # AI機能API
+│   │       └── process-file/  # ファイル処理API
 │   ├── layout.tsx         # ルートレイアウト
 │   ├── page.tsx           # ダッシュボード
 │   ├── tasks/             # 課題管理ページ
 │   ├── subjects/          # 時間割ページ
 │   ├── calendar/          # カレンダーページ
-│   └── notes/             # 授業メモページ
+│   ├── notes/             # 授業メモページ
+│   └── files/             # ファイル管理ページ
 ├── components/            # Reactコンポーネント
 │   ├── layout/           # レイアウトコンポーネント
 │   │   └── Sidebar.tsx   # サイドバーナビゲーション
+│   ├── ai/               # AI機能コンポーネント
+│   │   └── AIProcessDialog.tsx  # AI処理ダイアログ
 │   └── ui/               # UIコンポーネント
 │       ├── card.tsx
 │       ├── badge.tsx
@@ -126,6 +154,13 @@ Kadai_Manager_web/
 │       ├── select.tsx
 │       └── textarea.tsx
 ├── lib/                   # ユーティリティ関数
+│   ├── ai/               # AI機能ライブラリ
+│   │   ├── index.ts      # AI統合クライアント
+│   │   ├── openai.ts     # OpenAI実装
+│   │   ├── claude.ts     # Claude実装
+│   │   ├── gemini.ts     # Gemini実装
+│   │   ├── prompts.ts    # プロンプトテンプレート
+│   │   └── types.ts      # 型定義
 │   ├── utils.ts          # 汎用ユーティリティ
 │   └── prisma.ts         # Prismaクライアント
 ├── prisma/               # Prismaスキーマ
@@ -191,6 +226,20 @@ npx prisma studio
 
 ### 授業メモ
 科目別にメモを管理。一般メモ、小テスト日程、お知らせをカテゴリ分けして整理できます。科目やタイプでフィルタリング可能です。
+
+### 🤖 AI機能
+ファイル管理ページから、アップロードしたファイルに対してAI機能を実行できます：
+
+1. **ファイル要約**: 長いドキュメントや講義資料を自動要約
+2. **コード生成**: 課題の要件からプログラミングコードを自動生成
+3. **詳細分析**: ファイル内容の深い分析と学習提案
+
+**対応AIプロバイダー**:
+- OpenAI GPT-4 Omni: 最新のマルチモーダルモデル
+- Claude 3.5 Sonnet: 長文処理と日本語に強い
+- Google Gemini 1.5 Pro: 高性能な多目的モデル
+
+各ファイルの横にある紫色の✨ボタンから、プロバイダーと操作を選択して実行できます。
 
 ## ライセンス
 

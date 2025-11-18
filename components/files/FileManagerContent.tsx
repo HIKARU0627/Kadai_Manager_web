@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { FilePreviewDialog } from "@/components/ui/file-preview-dialog"
+import { AIProcessDialog } from "@/components/ai/AIProcessDialog"
 import { deleteFile } from "@/app/actions/files"
 import {
   FileIcon,
@@ -26,6 +27,7 @@ import {
   StickyNote,
   BookOpen,
   ArrowUpDown,
+  Sparkles,
 } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
@@ -96,6 +98,8 @@ export function FileManagerContent({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [groupBySubject, setGroupBySubject] = useState(false)
+  const [aiProcessFile, setAiProcessFile] = useState<{ id: string; name: string } | null>(null)
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false)
 
   // ファイルのフィルタリングとソート
   const filteredAndSortedFiles = useMemo(() => {
@@ -289,6 +293,11 @@ export function FileManagerContent({
     setIsPreviewOpen(true)
   }
 
+  const handleAiProcess = (file: FileItem) => {
+    setAiProcessFile({ id: file.id, name: file.fileName })
+    setIsAiDialogOpen(true)
+  }
+
   const toggleFileSelection = (fileId: string) => {
     setSelectedFiles((prev) => {
       const newSet = new Set(prev)
@@ -349,6 +358,15 @@ export function FileManagerContent({
       </div>
 
       <div className="flex items-center gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => handleAiProcess(file)}
+          title="AI機能"
+          className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+        >
+          <Sparkles className="w-4 h-4" />
+        </Button>
         {isPreviewable(file.fileType) && file.fileUrl && (
           <Button
             size="sm"
@@ -433,6 +451,15 @@ export function FileManagerContent({
         </p>
 
         <div className="flex items-center gap-1 w-full">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleAiProcess(file)}
+            className="flex-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+            title="AI機能"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
           {isPreviewable(file.fileType) && file.fileUrl && (
             <Button
               size="sm"
@@ -789,6 +816,16 @@ export function FileManagerContent({
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
         file={previewFile}
+      />
+
+      {/* AI処理ダイアログ */}
+      <AIProcessDialog
+        isOpen={isAiDialogOpen}
+        onClose={() => {
+          setIsAiDialogOpen(false)
+          setAiProcessFile(null)
+        }}
+        file={aiProcessFile}
       />
     </>
   )
