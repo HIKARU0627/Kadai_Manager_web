@@ -12,6 +12,7 @@ import {
   CalendarDays,
   FileText,
   LogOut,
+  Settings,
 } from "lucide-react"
 
 const navItems = [
@@ -39,6 +40,11 @@ const navItems = [
     title: "授業メモ",
     href: "/notes",
     icon: FileText,
+  },
+  {
+    title: "設定",
+    href: "/settings",
+    icon: Settings,
   },
 ]
 
