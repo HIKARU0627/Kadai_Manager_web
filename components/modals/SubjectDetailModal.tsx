@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { FilePreviewDialog } from "@/components/ui/file-preview-dialog"
-import { getSubjectFiles, deleteFile, createFile } from "@/app/actions/files"
+import { getSubjectFiles, deleteFile } from "@/app/actions/files"
 import { FileIcon, Download, Trash2, Upload, Eye, User, MapPin, Calendar, Clock } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
@@ -61,6 +61,7 @@ export function SubjectDetailModal({
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -81,14 +82,15 @@ export function SubjectDetailModal({
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       const invalidFiles = newFiles.filter((file) => file.size > 10 * 1024 * 1024)
-      
+
       if (invalidFiles.length > 0) {
         setUploadError("ファイルサイズは10MB以下にしてください")
         return
       }
-      
+
       setSelectedFiles((prev) => [...prev, ...newFiles])
       setUploadError(null)
+      setUploadSuccess(null)
     }
   }
 
@@ -101,12 +103,14 @@ export function SubjectDetailModal({
 
     setIsUploading(true)
     setUploadError(null)
+    setUploadSuccess(null)
 
     try {
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i]
         const formData = new FormData()
         formData.append("file", file)
+        formData.append("subjectId", subject.id)
 
         const uploadResponse = await fetch("/api/upload", {
           method: "POST",
@@ -114,20 +118,15 @@ export function SubjectDetailModal({
         })
 
         if (!uploadResponse.ok) {
-          throw new Error("ファイルのアップロードに失敗しました")
+          const errorData = await uploadResponse.json()
+          throw new Error(errorData.error || "ファイルのアップロードに失敗しました")
         }
 
         const uploadData = await uploadResponse.json()
 
-        // ファイル情報をデータベースに保存
-        await createFile({
-          userId,
-          subjectId: subject.id,
-          fileName: file.name,
-          fileUrl: uploadData.url,
-          fileType: file.type,
-          fileSize: file.size,
-        })
+        if (!uploadData.success) {
+          throw new Error(uploadData.error || "ファイルの保存に失敗しました")
+        }
 
         setUploadProgress(((i + 1) / selectedFiles.length) * 100)
       }
@@ -136,13 +135,14 @@ export function SubjectDetailModal({
       const result = await getSubjectFiles(subject.id)
       if (result.success) {
         setFiles(result.data as FileItem[])
+        setUploadSuccess(`${selectedFiles.length}個のファイルをアップロードしました`)
       }
 
       setSelectedFiles([])
       setUploadProgress(0)
     } catch (error) {
       console.error("Upload error:", error)
-      setUploadError("ファイルのアップロードに失敗しました")
+      setUploadError(error instanceof Error ? error.message : "ファイルのアップロードに失敗しました")
     } finally {
       setIsUploading(false)
     }
@@ -298,6 +298,12 @@ export function SubjectDetailModal({
               {uploadError && (
                 <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
                   {uploadError}
+                </div>
+              )}
+
+              {uploadSuccess && (
+                <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md">
+                  {uploadSuccess}
                 </div>
               )}
             </div>
