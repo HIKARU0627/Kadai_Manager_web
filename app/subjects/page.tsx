@@ -212,6 +212,12 @@ export default function SubjectsPage() {
                                 <p className="font-semibold text-gray-800">
                                   {subject.name}
                                 </p>
+                                {(subject.startTime || subject.endTime) && (
+                                  <p className="text-xs text-gray-600 flex items-center justify-center mt-1">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {subject.startTime || "--:--"} - {subject.endTime || "--:--"}
+                                  </p>
+                                )}
                                 {subject.teacher && (
                                   <p className="text-sm text-gray-600 flex items-center justify-center mt-1">
                                     <User className="w-3 h-3 mr-1" />
@@ -267,6 +273,12 @@ export default function SubjectsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm text-gray-600">
+                      {(subject.startTime || subject.endTime) && (
+                        <p className="flex items-center">
+                          <Clock className="w-4 h-4 mr-2" />
+                          時間: {subject.startTime || "--:--"} - {subject.endTime || "--:--"}
+                        </p>
+                      )}
                       {subject.teacher && (
                         <p className="flex items-center">
                           <User className="w-4 h-4 mr-2" />
