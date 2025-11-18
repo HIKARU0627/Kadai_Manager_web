@@ -13,6 +13,7 @@ import {
   FileText,
   LogOut,
   Settings,
+  FolderOpen,
 } from "lucide-react"
 
 const navItems = [
@@ -40,6 +41,11 @@ const navItems = [
     title: "授業メモ",
     href: "/notes",
     icon: FileText,
+  },
+  {
+    title: "ファイル管理",
+    href: "/files",
+    icon: FolderOpen,
   },
   {
     title: "設定",
