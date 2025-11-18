@@ -241,6 +241,8 @@ npx prisma studio
 
 各ファイルの横にある紫色の✨ボタンから、プロバイダーと操作を選択して実行できます。
 
+詳細な使い方は [AI_FEATURES.md](./AI_FEATURES.md) を参照してください。
+
 ## ライセンス
 
 MIT

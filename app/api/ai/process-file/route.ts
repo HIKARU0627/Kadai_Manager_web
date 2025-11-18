@@ -64,20 +64,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ファイルパスからコンテンツを読み取る
-    // 注: 本番環境ではS3などのストレージからダウンロードする必要があります
-    const fs = await import('fs/promises');
-    const path = await import('path');
-
+    // ファイルコンテンツの読み取り
     let fileContent: string;
-    try {
-      const fullPath = path.join(process.cwd(), 'public', file.path);
-      fileContent = await fs.readFile(fullPath, 'utf-8');
-    } catch (error) {
-      console.error('File read error:', error);
+
+    // fileUrlが存在する場合は、それがpublicディレクトリ内のパスと仮定
+    if (file.fileUrl) {
+      try {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+
+        // fileUrlは /uploads/... の形式なので、publicディレクトリからの相対パスを構築
+        const filePath = file.fileUrl.startsWith('/')
+          ? file.fileUrl.substring(1)
+          : file.fileUrl;
+        const fullPath = path.join(process.cwd(), 'public', filePath);
+
+        fileContent = await fs.readFile(fullPath, 'utf-8');
+      } catch (error) {
+        console.error('File read error:', error);
+        return NextResponse.json(
+          {
+            error: 'ファイルの読み取りに失敗しました。テキストファイルのみ対応しています。',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          },
+          { status: 500 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: 'ファイルの読み取りに失敗しました' },
-        { status: 500 }
+        { error: 'ファイルURLが見つかりません' },
+        { status: 404 }
       );
     }
 

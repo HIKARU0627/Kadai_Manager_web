@@ -11,7 +11,7 @@ function getGeminiClient(): GoogleGenerativeAI {
   if (!geminiClient) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
+      throw new Error('GEMINI_API_KEY が設定されていません。.env ファイルにAPIキーを追加してください。取得先: https://makersuite.google.com/app/apikey');
     }
     geminiClient = new GoogleGenerativeAI(apiKey);
   }

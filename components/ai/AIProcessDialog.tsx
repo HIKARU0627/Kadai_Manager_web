@@ -130,10 +130,14 @@ export function AIProcessDialog({
             AI機能でファイルを処理
           </DialogTitle>
           <DialogDescription>
-            {file?.name && (
-              <span className="font-medium text-foreground">
-                ファイル: {file.name}
-              </span>
+            {file?.name ? (
+              <>
+                ファイル: <span className="font-medium text-foreground">{file.name}</span>
+                <br />
+                AIプロバイダーと操作を選択して、ファイルを処理します。
+              </>
+            ) : (
+              'AIプロバイダーと操作を選択して、ファイルを処理します。'
             )}
           </DialogDescription>
         </DialogHeader>

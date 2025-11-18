@@ -11,7 +11,7 @@ function getOpenAIClient(): OpenAI {
   if (!openaiClient) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not configured');
+      throw new Error('OPENAI_API_KEY が設定されていません。.env ファイルにAPIキーを追加してください。取得先: https://platform.openai.com/api-keys');
     }
     openaiClient = new OpenAI({ apiKey });
   }
