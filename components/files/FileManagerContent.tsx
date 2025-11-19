@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { FilePreviewDialog } from "@/components/ui/file-preview-dialog"
 import { deleteFile } from "@/app/actions/files"
+import SemesterSelector from "@/components/SemesterSelector"
 import {
   FileIcon,
   Download,
@@ -67,7 +68,7 @@ interface FileManagerContentProps {
   totalSize: number
   tasks: { id: string; title: string }[]
   notes: { id: string; title: string }[]
-  subjects: { id: string; name: string }[]
+  subjects: { id: string; name: string; semesterId?: string | null }[]
   userId: string
 }
 
@@ -88,6 +89,7 @@ export function FileManagerContent({
   const [filterType, setFilterType] = useState<string>("all")
   const [filterResource, setFilterResource] = useState<string>("all")
   const [filterSubjectId, setFilterSubjectId] = useState<string>("all")
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>("list")
   const [sortField, setSortField] = useState<SortField>("createdAt")
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
@@ -96,6 +98,26 @@ export function FileManagerContent({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [groupBySubject, setGroupBySubject] = useState(false)
+
+  // 学期でフィルタリングされた科目リスト
+  const filteredSubjects = useMemo(() => {
+    if (!selectedSemesterId) {
+      return subjects
+    }
+    return subjects.filter((subject) => subject.semesterId === selectedSemesterId)
+  }, [subjects, selectedSemesterId])
+
+  // 学期が変更されたときに科目フィルターをリセット
+  useEffect(() => {
+    if (filterSubjectId !== "all") {
+      const subjectExists = filteredSubjects.some(
+        (subject) => subject.id === filterSubjectId
+      )
+      if (!subjectExists) {
+        setFilterSubjectId("all")
+      }
+    }
+  }, [selectedSemesterId, filteredSubjects, filterSubjectId])
 
   // ファイルのフィルタリングとソート
   const filteredAndSortedFiles = useMemo(() => {
@@ -472,10 +494,18 @@ export function FileManagerContent({
       <div className="p-8">
         {/* ヘッダー */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800">ファイル管理</h2>
-          <p className="text-gray-600 mt-2">
-            すべてのファイルを一元管理・検索できます
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-800">ファイル管理</h2>
+              <p className="text-gray-600 mt-2">
+                すべてのファイルを一元管理・検索できます
+              </p>
+            </div>
+            <SemesterSelector
+              selectedSemesterId={selectedSemesterId}
+              onSemesterChange={setSelectedSemesterId}
+            />
+          </div>
         </div>
 
         {/* 統計カード */}
@@ -595,7 +625,7 @@ export function FileManagerContent({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべての授業</SelectItem>
-                      {subjects.map((subject) => (
+                      {filteredSubjects.map((subject) => (
                         <SelectItem key={subject.id} value={subject.id}>
                           {subject.name}
                         </SelectItem>
