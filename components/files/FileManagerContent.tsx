@@ -156,6 +156,17 @@ export function FileManagerContent({
       })
     }
 
+    // 学期フィルター（科目に関連付けられているファイルのみ）
+    if (selectedSemesterId) {
+      const filteredSubjectIds = new Set(filteredSubjects.map((s) => s.id))
+      result = result.filter((file) => {
+        // 科目に関連付けられていないファイルは除外
+        if (!file.subjectId) return false
+        // 選択された学期の科目に関連付けられているファイルのみ表示
+        return filteredSubjectIds.has(file.subjectId)
+      })
+    }
+
     // 科目フィルター
     if (filterSubjectId !== "all") {
       result = result.filter((file) => file.subjectId === filterSubjectId)
@@ -178,7 +189,7 @@ export function FileManagerContent({
     })
 
     return result
-  }, [files, searchQuery, filterType, filterResource, filterSubjectId, sortField, sortOrder])
+  }, [files, searchQuery, filterType, filterResource, filterSubjectId, sortField, sortOrder, selectedSemesterId, filteredSubjects])
 
   // 科目別グループ化
   const groupedBySubject = useMemo(() => {
