@@ -71,7 +71,7 @@ export function AddSubjectModal({
   const [semesters, setSemesters] = useState<any[]>([])
 
   const [formData, setFormData] = useState({
-    semesterId: defaultSemesterId || "",
+    semesterId: defaultSemesterId || "none",
     name: "",
     teacher: "",
     classroom: "",
@@ -127,7 +127,7 @@ export function AddSubjectModal({
 
       const result = await createSubject({
         userId,
-        semesterId: formData.semesterId || undefined,
+        semesterId: formData.semesterId !== "none" ? formData.semesterId : undefined,
         name: formData.name,
         teacher: formData.teacher || undefined,
         classroom: formData.classroom || undefined,
@@ -141,7 +141,7 @@ export function AddSubjectModal({
       if (result.success) {
         // Reset form
         setFormData({
-          semesterId: defaultSemesterId || "",
+          semesterId: defaultSemesterId || "none",
           name: "",
           teacher: "",
           classroom: "",
@@ -188,7 +188,7 @@ export function AddSubjectModal({
                   <SelectValue placeholder="学期を選択（任意）" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">学期なし</SelectItem>
+                  <SelectItem value="none">学期なし</SelectItem>
                   {semesters.map((semester: any) => (
                     <SelectItem key={semester.id} value={semester.id}>
                       {semester.year}年度 {semester.name}
