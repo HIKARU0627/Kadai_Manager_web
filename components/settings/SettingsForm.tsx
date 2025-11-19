@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateUsername, updateEmail, updatePassword, updateFullName } from "@/app/actions/users"
-import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle } from "lucide-react"
+import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle, BookOpen } from "lucide-react"
 import { useRouter } from "next/navigation"
+import SemesterManagementModal from "@/components/modals/SemesterManagementModal"
 
 interface SettingsFormProps {
   user: {
@@ -23,7 +24,7 @@ interface SettingsFormProps {
 
 export function SettingsForm({ user, userId }: SettingsFormProps) {
   const router = useRouter()
-  
+
   // Profile state
   const [username, setUsername] = useState(user.username)
   const [fullName, setFullName] = useState(user.fullName || "")
@@ -44,6 +45,9 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
+
+  // Semester management state
+  const [isSemesterModalOpen, setIsSemesterModalOpen] = useState(false)
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -160,7 +164,7 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
       </Card>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-4 h-14 bg-gray-100">
           <TabsTrigger value="profile" className="text-base">
             <UserCircle className="w-5 h-5 mr-2" />
             プロフィール
@@ -172,6 +176,10 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
           <TabsTrigger value="security" className="text-base">
             <Shield className="w-5 h-5 mr-2" />
             セキュリティ
+          </TabsTrigger>
+          <TabsTrigger value="semester" className="text-base">
+            <BookOpen className="w-5 h-5 mr-2" />
+            学期管理
           </TabsTrigger>
         </TabsList>
 
@@ -430,7 +438,57 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Semester Tab */}
+        <TabsContent value="semester" className="mt-6">
+          <Card className="border-none shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-t-lg">
+              <CardTitle className="flex items-center text-xl">
+                <BookOpen className="w-6 h-6 mr-2" />
+                学期管理
+              </CardTitle>
+              <CardDescription className="text-orange-100">
+                年度と学期を管理して、時間割を整理しましょう
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-lg border border-orange-200">
+                  <h4 className="font-medium text-gray-800 mb-2 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-orange-600" />
+                    学期について
+                  </h4>
+                  <p className="text-sm text-gray-700 mb-4">
+                    学期を設定することで、年度ごとや学期ごとに教科を管理できます。
+                    例：2024年度 春1期、2024年度 秋2期など
+                  </p>
+                  <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                    <li>年度と学期名を自由に設定できます</li>
+                    <li>各学期に開始日・終了日を設定できます</li>
+                    <li>現在の学期を選択できます</li>
+                    <li>教科を学期ごとに整理できます</li>
+                  </ul>
+                </div>
+
+                <Button
+                  onClick={() => setIsSemesterModalOpen(true)}
+                  className="w-full h-12 text-base bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-700 hover:to-yellow-700 shadow-lg"
+                >
+                  <BookOpen className="w-5 h-5 mr-2" />
+                  学期を管理
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Semester Management Modal */}
+      <SemesterManagementModal
+        isOpen={isSemesterModalOpen}
+        onClose={() => setIsSemesterModalOpen(false)}
+        onSemesterChange={() => {}}
+      />
     </div>
   )
 }

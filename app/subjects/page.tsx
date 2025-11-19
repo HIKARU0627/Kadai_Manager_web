@@ -9,6 +9,8 @@ import { AddSubjectModal } from "@/components/modals/AddSubjectModal"
 import { EditSubjectModal } from "@/components/modals/EditSubjectModal"
 import { SubjectDetailModal } from "@/components/modals/SubjectDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import SemesterSelector from "@/components/SemesterSelector"
+import SemesterManagementModal from "@/components/modals/SemesterManagementModal"
 import { Plus, Clock, MapPin, User, FileText } from "lucide-react"
 import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
 
@@ -23,6 +25,7 @@ const periods = [
 
 interface Subject {
   id: string
+  semesterId: string | null
   name: string
   teacher: string | null
   classroom: string | null
@@ -39,7 +42,9 @@ export default function SubjectsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isSemesterManagementOpen, setIsSemesterManagementOpen] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -52,8 +57,8 @@ export default function SubjectsPage() {
 
       setIsLoading(true)
       const [scheduleResult, subjectsResult] = await Promise.all([
-        getWeeklySchedule(session.user.id),
-        getSubjects(session.user.id),
+        getWeeklySchedule(session.user.id, selectedSemesterId || undefined),
+        getSubjects(session.user.id, selectedSemesterId || undefined),
       ])
 
       if (scheduleResult.success) {
@@ -68,7 +73,7 @@ export default function SubjectsPage() {
     }
 
     fetchData()
-  }, [session?.user?.id])
+  }, [session?.user?.id, selectedSemesterId])
 
   // 重複を除いた科目リスト
   const uniqueSubjects = subjects.filter(
@@ -81,8 +86,8 @@ export default function SubjectsPage() {
     if (!session?.user?.id) return
 
     const [scheduleResult, subjectsResult] = await Promise.all([
-      getWeeklySchedule(session.user.id),
-      getSubjects(session.user.id),
+      getWeeklySchedule(session.user.id, selectedSemesterId || undefined),
+      getSubjects(session.user.id, selectedSemesterId || undefined),
     ])
 
     if (scheduleResult.success) {
@@ -153,18 +158,27 @@ export default function SubjectsPage() {
 
       <main className="flex-1 overflow-y-auto p-8">
         {/* ヘッダー */}
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-800">時間割</h2>
-            <p className="text-gray-600 mt-2">週間スケジュール</p>
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-800">時間割</h2>
+              <p className="text-gray-600 mt-2">週間スケジュール</p>
+            </div>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              科目を追加
+            </Button>
           </div>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            科目を追加
-          </Button>
+          <div className="flex items-center gap-2">
+            <SemesterSelector
+              selectedSemesterId={selectedSemesterId}
+              onSemesterChange={setSelectedSemesterId}
+              onManageSemesters={() => setIsSemesterManagementOpen(true)}
+            />
+          </div>
         </div>
 
         {/* 時間割テーブル */}
@@ -357,6 +371,7 @@ export default function SubjectsPage() {
         open={isAddModalOpen}
         onOpenChange={handleAddModalClose}
         userId={session?.user?.id || ""}
+        defaultSemesterId={selectedSemesterId}
       />
 
       {/* 科目編集モーダル */}
@@ -382,6 +397,13 @@ export default function SubjectsPage() {
         title="科目を削除しますか？"
         description={`「${selectedSubject?.name || ""}」を削除します。この操作は取り消せません。本当に削除してもよろしいですか？`}
         isDeleting={isDeleting}
+      />
+
+      {/* 学期管理モーダル */}
+      <SemesterManagementModal
+        isOpen={isSemesterManagementOpen}
+        onClose={() => setIsSemesterManagementOpen(false)}
+        onSemesterChange={fetchScheduleData}
       />
     </div>
   )

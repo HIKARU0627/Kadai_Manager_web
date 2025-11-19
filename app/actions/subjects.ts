@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 
 export interface CreateSubjectInput {
   userId: string
+  semesterId?: string
   name: string
   teacher?: string
   classroom?: string
@@ -17,6 +18,7 @@ export interface CreateSubjectInput {
 
 export interface UpdateSubjectInput {
   id: string
+  semesterId?: string
   name?: string
   teacher?: string
   classroom?: string
@@ -33,6 +35,7 @@ export async function createSubject(input: CreateSubjectInput) {
     const subject = await prisma.subject.create({
       data: {
         userId: input.userId,
+        semesterId: input.semesterId,
         name: input.name,
         teacher: input.teacher,
         classroom: input.classroom,
@@ -59,6 +62,7 @@ export async function updateSubject(input: UpdateSubjectInput) {
   try {
     const updateData: any = { updatedAt: new Date() }
 
+    if (input.semesterId !== undefined) updateData.semesterId = input.semesterId
     if (input.name !== undefined) updateData.name = input.name
     if (input.teacher !== undefined) updateData.teacher = input.teacher
     if (input.classroom !== undefined) updateData.classroom = input.classroom
@@ -119,10 +123,20 @@ export async function getSubject(id: string) {
 }
 
 // 科目を取得（一覧）
-export async function getSubjects(userId: string) {
+export async function getSubjects(userId: string, semesterId?: string) {
   try {
+    const where: any = { userId }
+
+    // semesterIdが指定されている場合はフィルタリング
+    if (semesterId) {
+      where.semesterId = semesterId
+    }
+
     const subjects = await prisma.subject.findMany({
-      where: { userId },
+      where,
+      include: {
+        semester: true,
+      },
       orderBy: [
         { dayOfWeek: "asc" },
         { period: "asc" },
@@ -137,15 +151,25 @@ export async function getSubjects(userId: string) {
 }
 
 // 今日の時間割を取得
-export async function getTodaySubjects(userId: string) {
+export async function getTodaySubjects(userId: string, semesterId?: string) {
   try {
     const today = new Date()
     const dayOfWeek = today.getDay()
 
+    const where: any = {
+      userId,
+      dayOfWeek,
+    }
+
+    // semesterIdが指定されている場合はフィルタリング
+    if (semesterId) {
+      where.semesterId = semesterId
+    }
+
     const subjects = await prisma.subject.findMany({
-      where: {
-        userId,
-        dayOfWeek,
+      where,
+      include: {
+        semester: true,
       },
       orderBy: {
         period: "asc",
@@ -160,10 +184,20 @@ export async function getTodaySubjects(userId: string) {
 }
 
 // 週間時間割を取得
-export async function getWeeklySchedule(userId: string) {
+export async function getWeeklySchedule(userId: string, semesterId?: string) {
   try {
+    const where: any = { userId }
+
+    // semesterIdが指定されている場合はフィルタリング
+    if (semesterId) {
+      where.semesterId = semesterId
+    }
+
     const subjects = await prisma.subject.findMany({
-      where: { userId },
+      where,
+      include: {
+        semester: true,
+      },
       orderBy: [
         { dayOfWeek: "asc" },
         { period: "asc" },

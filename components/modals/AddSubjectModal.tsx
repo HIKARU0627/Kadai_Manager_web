@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -20,11 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createSubject } from "@/app/actions/subjects"
+import { getSemesters } from "@/app/actions/semesters"
 
 interface AddSubjectModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   userId: string
+  defaultSemesterId?: string | null
 }
 
 const weekDays = [
@@ -62,11 +64,14 @@ export function AddSubjectModal({
   open,
   onOpenChange,
   userId,
+  defaultSemesterId,
 }: AddSubjectModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [semesters, setSemesters] = useState<any[]>([])
 
   const [formData, setFormData] = useState({
+    semesterId: defaultSemesterId || "",
     name: "",
     teacher: "",
     classroom: "",
@@ -76,6 +81,24 @@ export function AddSubjectModal({
     endTime: "",
     color: "#3B82F6",
   })
+
+  useEffect(() => {
+    if (open) {
+      loadSemesters()
+      if (defaultSemesterId) {
+        setFormData(prev => ({ ...prev, semesterId: defaultSemesterId }))
+      }
+    }
+  }, [open, defaultSemesterId])
+
+  const loadSemesters = async () => {
+    try {
+      const data = await getSemesters()
+      setSemesters(data)
+    } catch (error) {
+      console.error('Failed to load semesters:', error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,6 +127,7 @@ export function AddSubjectModal({
 
       const result = await createSubject({
         userId,
+        semesterId: formData.semesterId || undefined,
         name: formData.name,
         teacher: formData.teacher || undefined,
         classroom: formData.classroom || undefined,
@@ -117,6 +141,7 @@ export function AddSubjectModal({
       if (result.success) {
         // Reset form
         setFormData({
+          semesterId: defaultSemesterId || "",
           name: "",
           teacher: "",
           classroom: "",
@@ -150,6 +175,30 @@ export function AddSubjectModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* 学期選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="semester">学期</Label>
+              <Select
+                value={formData.semesterId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, semesterId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="学期を選択（任意）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">学期なし</SelectItem>
+                  {semesters.map((semester: any) => (
+                    <SelectItem key={semester.id} value={semester.id}>
+                      {semester.year}年度 {semester.name}
+                      {semester.isActive && " (現在)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* 科目名 */}
             <div className="grid gap-2">
               <Label htmlFor="name">

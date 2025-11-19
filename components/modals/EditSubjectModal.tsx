@@ -20,12 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { updateSubject } from "@/app/actions/subjects"
+import { getSemesters } from "@/app/actions/semesters"
 
 interface EditSubjectModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   subject: {
     id: string
+    semesterId: string | null
     name: string
     teacher: string | null
     classroom: string | null
@@ -75,8 +77,10 @@ export function EditSubjectModal({
 }: EditSubjectModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [semesters, setSemesters] = useState<any[]>([])
 
   const [formData, setFormData] = useState({
+    semesterId: "",
     name: "",
     teacher: "",
     classroom: "",
@@ -87,10 +91,27 @@ export function EditSubjectModal({
     color: "#3B82F6",
   })
 
+  // 学期一覧を読み込み
+  useEffect(() => {
+    if (open) {
+      loadSemesters()
+    }
+  }, [open])
+
+  const loadSemesters = async () => {
+    try {
+      const data = await getSemesters()
+      setSemesters(data)
+    } catch (error) {
+      console.error('Failed to load semesters:', error)
+    }
+  }
+
   // subject が変更されたときにフォームデータを更新
   useEffect(() => {
     if (subject) {
       setFormData({
+        semesterId: subject.semesterId || "",
         name: subject.name,
         teacher: subject.teacher || "",
         classroom: subject.classroom || "",
@@ -132,6 +153,7 @@ export function EditSubjectModal({
 
       const result = await updateSubject({
         id: subject.id,
+        semesterId: formData.semesterId || undefined,
         name: formData.name,
         teacher: formData.teacher || undefined,
         classroom: formData.classroom || undefined,
@@ -169,6 +191,30 @@ export function EditSubjectModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* 学期選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="semester">学期</Label>
+              <Select
+                value={formData.semesterId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, semesterId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="学期を選択（任意）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">学期なし</SelectItem>
+                  {semesters.map((semester: any) => (
+                    <SelectItem key={semester.id} value={semester.id}>
+                      {semester.year}年度 {semester.name}
+                      {semester.isActive && " (現在)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* 科目名 */}
             <div className="grid gap-2">
               <Label htmlFor="name">
