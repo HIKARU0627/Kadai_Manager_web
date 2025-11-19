@@ -26,8 +26,8 @@ export async function processWithGemini(
 ): Promise<AIResponse> {
   try {
     const client = getGeminiClient();
-    // gemini-pro または gemini-1.5-flash-latest を使用
-    const model = client.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    // 利用可能なモデル: gemini-pro, gemini-1.5-flash, gemini-2.0-flash-exp
+    const model = client.getGenerativeModel({ model: 'gemini-pro' });
 
     let systemPrompt = '';
     let userPrompt = '';
