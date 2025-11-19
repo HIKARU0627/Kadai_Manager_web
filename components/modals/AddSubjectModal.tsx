@@ -91,6 +91,18 @@ export function AddSubjectModal({
     }
   }, [open, defaultSemesterId])
 
+  // 学期更新イベントをリッスン
+  useEffect(() => {
+    const handleSemesterUpdate = () => {
+      if (open) {
+        loadSemesters()
+      }
+    }
+
+    window.addEventListener('semesterUpdated', handleSemesterUpdate)
+    return () => window.removeEventListener('semesterUpdated', handleSemesterUpdate)
+  }, [open])
+
   const loadSemesters = async () => {
     try {
       const data = await getSemesters()

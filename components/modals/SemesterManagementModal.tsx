@@ -86,6 +86,8 @@ export default function SemesterManagementModal({
       });
       await loadSemesters();
       onSemesterChange?.();
+      // 他のコンポーネントに学期が更新されたことを通知
+      window.dispatchEvent(new Event('semesterUpdated'));
     } catch (error) {
       console.error('Failed to create semester:', error);
       alert('学期の作成に失敗しました');
@@ -104,6 +106,8 @@ export default function SemesterManagementModal({
       await deleteSemester(id);
       await loadSemesters();
       onSemesterChange?.();
+      // 他のコンポーネントに学期が更新されたことを通知
+      window.dispatchEvent(new Event('semesterUpdated'));
     } catch (error) {
       console.error('Failed to delete semester:', error);
       alert('学期の削除に失敗しました');
@@ -118,6 +122,8 @@ export default function SemesterManagementModal({
       await setActiveSemester(id);
       await loadSemesters();
       onSemesterChange?.();
+      // 他のコンポーネントに学期が更新されたことを通知
+      window.dispatchEvent(new Event('semesterUpdated'));
     } catch (error) {
       console.error('Failed to set active semester:', error);
       alert('学期の切り替えに失敗しました');
