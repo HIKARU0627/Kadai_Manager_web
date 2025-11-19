@@ -7,8 +7,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { getSemesters, getActiveSemester } from '@/app/actions/semesters';
 
