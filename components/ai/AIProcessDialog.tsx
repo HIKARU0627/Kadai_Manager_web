@@ -176,6 +176,18 @@ export function AIProcessDialog({
       };
     }
 
+    if (msg.includes('503') || msg.includes('overloaded') || msg.includes('service unavailable')) {
+      return {
+        title: 'サービスが過負荷状態です',
+        description: `${getProviderLabel(currentProvider)}のサーバーが現在過負荷状態です。しばらく時間をおいてから再試行してください。`,
+        suggestions: [
+          '1. 数分待ってから再試行',
+          '2. 別のAIプロバイダー（OpenAI または Claude）を試す',
+          '3. ファイルサイズを小さくして再試行',
+        ],
+      };
+    }
+
     if (msg.includes('404') || msg.includes('not found') || msg.includes('model')) {
       return {
         title: 'モデルが見つかりません',
