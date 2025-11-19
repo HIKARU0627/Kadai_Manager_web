@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 import { getTodaySubjects } from "@/app/actions/subjects"
 import { getTodayTasks } from "@/app/actions/tasks"
 import { getTodayEvents } from "@/app/actions/events"
+import { getPeriods } from "@/app/actions/periods"
 import Link from "next/link"
 
 const statusLabels = {
@@ -30,15 +31,21 @@ export default async function DashboardPage() {
   const formattedDate = format(today, "yyyy年MM月dd日（E）", { locale: ja })
 
   // データベースからデータを取得
-  const [subjectsResult, tasksResult, eventsResult] = await Promise.all([
+  const [subjectsResult, tasksResult, eventsResult, periods] = await Promise.all([
     getTodaySubjects(session.user.id),
     getTodayTasks(session.user.id),
     getTodayEvents(session.user.id),
+    getPeriods(session.user.id),
   ])
 
   const todaySubjects = subjectsResult.success ? subjectsResult.data : []
   const todayTasks = tasksResult.success ? tasksResult.data : []
   const todayEvents = eventsResult.success ? eventsResult.data : []
+
+  // 時限番号から時刻情報を取得するためのマップを作成
+  const periodMap = new Map(
+    periods.map((p) => [p.periodNumber, { startTime: p.startTime, endTime: p.endTime }])
+  )
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -68,31 +75,36 @@ export default async function DashboardPage() {
             <CardContent>
               {todaySubjects.length > 0 ? (
                 <div className="space-y-3">
-                  {todaySubjects.map((subject) => (
-                    <div
-                      key={subject.id}
-                      className="border-l-4 p-4 rounded-r-lg"
-                      style={{
-                        borderLeftColor: subject.color,
-                        backgroundColor: `${subject.color}10`,
-                      }}
-                    >
-                      <p className="font-semibold text-gray-800">
-                        {subject.period}限: {subject.name}
-                      </p>
-                      <p className="text-sm text-gray-600 flex items-center mt-1">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {subject.startTime} - {subject.endTime}
-                      </p>
-                      {(subject.classroom || subject.teacher) && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          {subject.classroom && `教室: ${subject.classroom}`}
-                          {subject.classroom && subject.teacher && " / "}
-                          {subject.teacher && `担当: ${subject.teacher}`}
+                  {todaySubjects.map((subject) => {
+                    const periodTime = periodMap.get(subject.period)
+                    return (
+                      <div
+                        key={subject.id}
+                        className="border-l-4 p-4 rounded-r-lg"
+                        style={{
+                          borderLeftColor: subject.color,
+                          backgroundColor: `${subject.color}10`,
+                        }}
+                      >
+                        <p className="font-semibold text-gray-800">
+                          {subject.period}限: {subject.name}
                         </p>
-                      )}
-                    </div>
-                  ))}
+                        {periodTime && (
+                          <p className="text-sm text-gray-600 flex items-center mt-1">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {periodTime.startTime} - {periodTime.endTime}
+                          </p>
+                        )}
+                        {(subject.classroom || subject.teacher) && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            {subject.classroom && `教室: ${subject.classroom}`}
+                            {subject.classroom && subject.teacher && " / "}
+                            {subject.teacher && `担当: ${subject.teacher}`}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-4">

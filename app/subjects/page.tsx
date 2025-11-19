@@ -13,15 +13,16 @@ import SemesterSelector from "@/components/SemesterSelector"
 import SemesterManagementModal from "@/components/modals/SemesterManagementModal"
 import { Plus, Clock, MapPin, User, FileText } from "lucide-react"
 import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
+import { getPeriods } from "@/app/actions/periods"
 
 const weekDays = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日"]
-const periods = [
-  { period: 1, startTime: "09:00", endTime: "10:30" },
-  { period: 2, startTime: "10:40", endTime: "12:10" },
-  { period: 3, startTime: "13:00", endTime: "14:30" },
-  { period: 4, startTime: "14:40", endTime: "16:10" },
-  { period: 5, startTime: "16:20", endTime: "17:50" },
-]
+
+interface Period {
+  id: string
+  periodNumber: number
+  startTime: string
+  endTime: string
+}
 
 interface Subject {
   id: string
@@ -32,8 +33,6 @@ interface Subject {
   color: string
   dayOfWeek: number
   period: number
-  startTime: string | null
-  endTime: string | null
 }
 
 export default function SubjectsPage() {
@@ -47,6 +46,7 @@ export default function SubjectsPage() {
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [periods, setPeriods] = useState<Period[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -56,9 +56,10 @@ export default function SubjectsPage() {
       if (!session?.user?.id) return
 
       setIsLoading(true)
-      const [scheduleResult, subjectsResult] = await Promise.all([
+      const [scheduleResult, subjectsResult, periodsData] = await Promise.all([
         getWeeklySchedule(session.user.id, selectedSemesterId || undefined),
         getSubjects(session.user.id, selectedSemesterId || undefined),
+        getPeriods(session.user.id),
       ])
 
       if (scheduleResult.success) {
@@ -68,6 +69,8 @@ export default function SubjectsPage() {
       if (subjectsResult.success) {
         setSubjects(subjectsResult.data)
       }
+
+      setPeriods(periodsData)
 
       setIsLoading(false)
     }
@@ -203,10 +206,10 @@ export default function SubjectsPage() {
                 </thead>
                 <tbody>
                   {periods.map((period) => (
-                    <tr key={period.period} className="hover:bg-gray-50">
+                    <tr key={period.periodNumber} className="hover:bg-gray-50">
                       <td className="px-4 py-4 border-b border-r">
                         <div className="font-semibold text-gray-800">
-                          {period.period}限
+                          {period.periodNumber}限
                         </div>
                         <div className="text-sm text-gray-500 flex items-center mt-1">
                           <Clock className="w-3 h-3 mr-1" />
@@ -216,7 +219,7 @@ export default function SubjectsPage() {
                       {weekDays.map((day, dayIndex) => {
                         // dayIndex: 0=月曜, 1=火曜, ... -> dayOfWeek: 1=月曜, 2=火曜, ...
                         const dayOfWeek = dayIndex + 1
-                        const subject = schedule[dayOfWeek]?.[period.period]
+                        const subject = schedule[dayOfWeek]?.[period.periodNumber]
 
                         return (
                           <td
@@ -235,12 +238,6 @@ export default function SubjectsPage() {
                                 <p className="font-semibold text-gray-800">
                                   {subject.name}
                                 </p>
-                                {(subject.startTime || subject.endTime) && (
-                                  <p className="text-xs text-gray-600 flex items-center justify-center mt-1">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {subject.startTime || "--:--"} - {subject.endTime || "--:--"}
-                                  </p>
-                                )}
                                 {subject.teacher && (
                                   <p className="text-sm text-gray-600 flex items-center justify-center mt-1">
                                     <User className="w-3 h-3 mr-1" />
@@ -296,12 +293,6 @@ export default function SubjectsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm text-gray-600">
-                      {(subject.startTime || subject.endTime) && (
-                        <p className="flex items-center">
-                          <Clock className="w-4 h-4 mr-2" />
-                          時間: {subject.startTime || "--:--"} - {subject.endTime || "--:--"}
-                        </p>
-                      )}
                       {subject.teacher && (
                         <p className="flex items-center">
                           <User className="w-4 h-4 mr-2" />
