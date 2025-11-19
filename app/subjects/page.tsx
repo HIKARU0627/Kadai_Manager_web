@@ -353,11 +353,13 @@ export default function SubjectsPage() {
       </main>
 
       {/* 科目追加モーダル */}
-      <AddSubjectModal
-        open={isAddModalOpen}
-        onOpenChange={handleAddModalClose}
-        userId={session?.user?.id || ""}
-      />
+      {session?.user?.id && (
+        <AddSubjectModal
+          open={isAddModalOpen}
+          onOpenChange={handleAddModalClose}
+          userId={session.user.id}
+        />
+      )}
 
       {/* 科目編集モーダル */}
       <EditSubjectModal
@@ -367,12 +369,14 @@ export default function SubjectsPage() {
       />
 
       {/* 科目詳細モーダル */}
-      <SubjectDetailModal
-        open={isDetailModalOpen}
-        onOpenChange={setIsDetailModalOpen}
-        subject={selectedSubject}
-        userId={session?.user?.id || ""}
-      />
+      {session?.user?.id && (
+        <SubjectDetailModal
+          open={isDetailModalOpen}
+          onOpenChange={setIsDetailModalOpen}
+          subject={selectedSubject}
+          userId={session.user.id}
+        />
+      )}
 
       {/* 削除確認ダイアログ */}
       <DeleteConfirmDialog

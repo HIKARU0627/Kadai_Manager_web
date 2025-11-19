@@ -30,6 +30,28 @@ export interface UpdateSubjectInput {
 // 科目を作成
 export async function createSubject(input: CreateSubjectInput) {
   try {
+    // userIdが空または無効な場合のチェック
+    if (!input.userId || input.userId.trim() === "") {
+      console.error("Invalid userId:", input.userId)
+      return {
+        success: false,
+        error: "ユーザーIDが無効です。ログインし直してください。",
+      }
+    }
+
+    // ユーザーが存在するか確認
+    const userExists = await prisma.user.findUnique({
+      where: { id: input.userId },
+    })
+
+    if (!userExists) {
+      console.error("User not found:", input.userId)
+      return {
+        success: false,
+        error: "ユーザーが見つかりません。ログインし直してください。",
+      }
+    }
+
     const subject = await prisma.subject.create({
       data: {
         userId: input.userId,
@@ -50,7 +72,10 @@ export async function createSubject(input: CreateSubjectInput) {
     return { success: true, data: subject }
   } catch (error) {
     console.error("Failed to create subject:", error)
-    return { success: false, error: "科目の作成に失敗しました" }
+    return {
+      success: false,
+      error: "科目の作成に失敗しました。もう一度お試しください。",
+    }
   }
 }
 
