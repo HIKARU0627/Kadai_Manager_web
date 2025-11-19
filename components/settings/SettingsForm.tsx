@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateUsername, updateEmail, updatePassword, updateFullName } from "@/app/actions/users"
-import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle, BookOpen } from "lucide-react"
+import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle, BookOpen, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import SemesterManagementModal from "@/components/modals/SemesterManagementModal"
+import { PeriodManagementModal } from "@/components/modals/PeriodManagementModal"
 
 interface SettingsFormProps {
   user: {
@@ -48,6 +49,9 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
 
   // Semester management state
   const [isSemesterModalOpen, setIsSemesterModalOpen] = useState(false)
+
+  // Period management state
+  const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false)
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,7 +168,7 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
       </Card>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-5 h-14 bg-gray-100">
           <TabsTrigger value="profile" className="text-base">
             <UserCircle className="w-5 h-5 mr-2" />
             プロフィール
@@ -180,6 +184,10 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
           <TabsTrigger value="semester" className="text-base">
             <BookOpen className="w-5 h-5 mr-2" />
             学期管理
+          </TabsTrigger>
+          <TabsTrigger value="period" className="text-base">
+            <Clock className="w-5 h-5 mr-2" />
+            時限設定
           </TabsTrigger>
         </TabsList>
 
@@ -481,6 +489,49 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Period Tab */}
+        <TabsContent value="period" className="mt-6">
+          <Card className="border-none shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-t-lg">
+              <CardTitle className="flex items-center text-xl">
+                <Clock className="w-6 h-6 mr-2" />
+                時限設定
+              </CardTitle>
+              <CardDescription className="text-cyan-100">
+                授業の時限ごとの時刻を設定しましょう
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-lg border border-cyan-200">
+                  <h4 className="font-medium text-gray-800 mb-2 flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-cyan-600" />
+                    時限設定について
+                  </h4>
+                  <p className="text-sm text-gray-700 mb-4">
+                    各時限の開始時刻と終了時刻を設定できます。
+                    設定した時刻は時間割表示で使用されます。
+                  </p>
+                  <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                    <li>1限、2限などの開始・終了時刻を設定できます</li>
+                    <li>デフォルト設定（1限～5限）を自動作成できます</li>
+                    <li>時限は自由に追加・編集・削除できます</li>
+                    <li>学校や大学の時間割に合わせてカスタマイズできます</li>
+                  </ul>
+                </div>
+
+                <Button
+                  onClick={() => setIsPeriodModalOpen(true)}
+                  className="w-full h-12 text-base bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-lg"
+                >
+                  <Clock className="w-5 h-5 mr-2" />
+                  時限設定を管理
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Semester Management Modal */}
@@ -488,6 +539,13 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
         isOpen={isSemesterModalOpen}
         onClose={() => setIsSemesterModalOpen(false)}
         onSemesterChange={() => {}}
+      />
+
+      {/* Period Management Modal */}
+      <PeriodManagementModal
+        open={isPeriodModalOpen}
+        onOpenChange={setIsPeriodModalOpen}
+        userId={userId}
       />
     </div>
   )

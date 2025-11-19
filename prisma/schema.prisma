@@ -26,6 +26,7 @@ model User {
   files        File[]
   reminders    Reminder[]
   semesters    Semester[]
+  periods      Period[]
 
   @@map("users")
 }
@@ -39,8 +40,6 @@ model Subject {
   classroom   String?
   dayOfWeek   Int      // 0=日曜, 1=月曜, ..., 6=土曜
   period      Int      // 時限
-  startTime   String?  // HH:mm format
-  endTime     String?  // HH:mm format
   color       String   @default("#3B82F6")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -167,4 +166,19 @@ model Semester {
   subjects  Subject[]
 
   @@map("semesters")
+}
+
+model Period {
+  id           String   @id @default(cuid())
+  userId       String
+  periodNumber Int      // 時限番号 (1, 2, 3, 4, 5, ...)
+  startTime    String   // HH:mm format (例: "09:00")
+  endTime      String   // HH:mm format (例: "10:30")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodNumber])
+  @@map("periods")
 }

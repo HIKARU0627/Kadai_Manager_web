@@ -11,8 +11,6 @@ export interface CreateSubjectInput {
   classroom?: string
   dayOfWeek: number // 0=日曜, 1=月曜, ..., 6=土曜
   period: number
-  startTime?: string
-  endTime?: string
   color?: string
 }
 
@@ -24,8 +22,6 @@ export interface UpdateSubjectInput {
   classroom?: string
   dayOfWeek?: number
   period?: number
-  startTime?: string
-  endTime?: string
   color?: string
 }
 
@@ -41,8 +37,6 @@ export async function createSubject(input: CreateSubjectInput) {
         classroom: input.classroom,
         dayOfWeek: input.dayOfWeek,
         period: input.period,
-        startTime: input.startTime,
-        endTime: input.endTime,
         color: input.color || "#3B82F6",
       },
     })
@@ -68,8 +62,6 @@ export async function updateSubject(input: UpdateSubjectInput) {
     if (input.classroom !== undefined) updateData.classroom = input.classroom
     if (input.dayOfWeek !== undefined) updateData.dayOfWeek = input.dayOfWeek
     if (input.period !== undefined) updateData.period = input.period
-    if (input.startTime !== undefined) updateData.startTime = input.startTime
-    if (input.endTime !== undefined) updateData.endTime = input.endTime
     if (input.color !== undefined) updateData.color = input.color
 
     const subject = await prisma.subject.update({

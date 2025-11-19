@@ -77,8 +77,6 @@ export function AddSubjectModal({
     classroom: "",
     dayOfWeek: "",
     period: "",
-    startTime: "",
-    endTime: "",
     color: "#3B82F6",
   })
 
@@ -145,8 +143,6 @@ export function AddSubjectModal({
         classroom: formData.classroom || undefined,
         dayOfWeek: parseInt(formData.dayOfWeek),
         period: parseInt(formData.period),
-        startTime: formData.startTime || undefined,
-        endTime: formData.endTime || undefined,
         color: formData.color,
       })
 
@@ -159,8 +155,6 @@ export function AddSubjectModal({
           classroom: "",
           dayOfWeek: "",
           period: "",
-          startTime: "",
-          endTime: "",
           color: "#3B82F6",
         })
         onOpenChange(false)
@@ -273,33 +267,6 @@ export function AddSubjectModal({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            {/* 開始・終了時刻 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="startTime">開始時刻</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startTime: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="endTime">終了時刻</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endTime: e.target.value })
-                  }
-                />
               </div>
             </div>
 
