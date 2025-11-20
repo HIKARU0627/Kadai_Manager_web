@@ -12,6 +12,7 @@ import { SubjectDetailModal } from "@/components/modals/SubjectDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
 import SemesterSelector from "@/components/SemesterSelector"
 import SemesterManagementModal from "@/components/modals/SemesterManagementModal"
+import { PeriodManagementModal } from "@/components/modals/PeriodManagementModal"
 import { Plus, Clock, MapPin, User, FileText } from "lucide-react"
 import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
 import { getPeriods } from "@/app/actions/periods"
@@ -44,6 +45,7 @@ export default function SubjectsPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isSemesterManagementOpen, setIsSemesterManagementOpen] = useState(false)
+  const [isPeriodManagementOpen, setIsPeriodManagementOpen] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
@@ -162,6 +164,15 @@ export default function SubjectsPage() {
     setIsDeleting(false)
   }
 
+  // 時限設定モーダルを閉じた時に時限データを再取得
+  const handlePeriodModalChange = async (open: boolean) => {
+    setIsPeriodManagementOpen(open)
+    if (!open && session?.user?.id) {
+      const periodsData = await getPeriods(session.user.id)
+      setPeriods(periodsData)
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
@@ -188,6 +199,14 @@ export default function SubjectsPage() {
               onSemesterChange={setSelectedSemesterId}
               onManageSemesters={() => setIsSemesterManagementOpen(true)}
             />
+            <Button
+              variant="outline"
+              onClick={() => setIsPeriodManagementOpen(true)}
+              className="ml-2"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              時限設定
+            </Button>
           </div>
         </div>
 
@@ -417,6 +436,13 @@ export default function SubjectsPage() {
         isOpen={isSemesterManagementOpen}
         onClose={() => setIsSemesterManagementOpen(false)}
         onSemesterChange={fetchScheduleData}
+      />
+
+      {/* 時限設定モーダル */}
+      <PeriodManagementModal
+        open={isPeriodManagementOpen}
+        onOpenChange={handlePeriodModalChange}
+        userId={session?.user?.id || ""}
       />
     </div>
   )

@@ -101,7 +101,10 @@ export function Sidebar() {
       <div className="p-4 border-t border-gray-200 bg-white space-y-3">
         {session?.user && (
           <>
-            <div className="flex items-center">
+            <Link
+              href="/settings"
+              className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            >
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
                 {userInitial}
               </div>
@@ -113,7 +116,7 @@ export function Sidebar() {
                   {session.user.email}
                 </p>
               </div>
-            </div>
+            </Link>
             <Button
               variant="outline"
               className="w-full"
