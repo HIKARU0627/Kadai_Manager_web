@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button"
 import { AddSubjectModal } from "@/components/modals/AddSubjectModal"
 import { EditSubjectModal } from "@/components/modals/EditSubjectModal"
 import { SubjectDetailModal } from "@/components/modals/SubjectDetailModal"
+import { AddEventModal } from "@/components/modals/AddEventModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
 import SemesterSelector from "@/components/SemesterSelector"
 import SemesterManagementModal from "@/components/modals/SemesterManagementModal"
 import { PeriodManagementModal } from "@/components/modals/PeriodManagementModal"
-import { Plus, Clock, MapPin, User, FileText } from "lucide-react"
+import { Plus, Clock, MapPin, User, FileText, CalendarPlus } from "lucide-react"
 import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
 import { getPeriods } from "@/app/actions/periods"
 
@@ -46,6 +47,7 @@ export default function SubjectsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isSemesterManagementOpen, setIsSemesterManagementOpen] = useState(false)
   const [isPeriodManagementOpen, setIsPeriodManagementOpen] = useState(false)
+  const [isAddTestEventModalOpen, setIsAddTestEventModalOpen] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
@@ -170,6 +172,20 @@ export default function SubjectsPage() {
     if (!open && session?.user?.id) {
       const periodsData = await getPeriods(session.user.id)
       setPeriods(periodsData)
+    }
+  }
+
+  // テスト追加ボタンのハンドラー
+  const handleAddTest = (subject: Subject) => {
+    setSelectedSubject(subject)
+    setIsAddTestEventModalOpen(true)
+  }
+
+  // テストイベントモーダルを閉じた時
+  const handleTestEventModalClose = (open: boolean) => {
+    setIsAddTestEventModalOpen(open)
+    if (!open) {
+      setSelectedSubject(null)
     }
   }
 
@@ -345,32 +361,43 @@ export default function SubjectsPage() {
                         </p>
                       )}
                     </div>
-                    <div className="mt-4 flex space-x-2">
+                    <div className="mt-4 flex flex-col space-y-2">
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleViewDetail(subject)}
+                          title="ファイル管理"
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          ファイル
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEdit(subject)}
+                        >
+                          編集
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteClick(subject)}
+                        >
+                          削除
+                        </Button>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
-                        onClick={() => handleViewDetail(subject)}
-                        title="ファイル管理"
+                        className="w-full text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleAddTest(subject)}
                       >
-                        <FileText className="w-4 h-4 mr-1" />
-                        ファイル
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleEdit(subject)}
-                      >
-                        編集
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:bg-red-50"
-                        onClick={() => handleDeleteClick(subject)}
-                      >
-                        削除
+                        <CalendarPlus className="w-4 h-4 mr-2" />
+                        テストを追加
                       </Button>
                     </div>
                   </CardContent>
@@ -443,6 +470,16 @@ export default function SubjectsPage() {
         open={isPeriodManagementOpen}
         onOpenChange={handlePeriodModalChange}
         userId={session?.user?.id || ""}
+      />
+
+      {/* テスト追加モーダル */}
+      <AddEventModal
+        open={isAddTestEventModalOpen}
+        onOpenChange={handleTestEventModalClose}
+        userId={session?.user?.id || ""}
+        subjects={subjects}
+        defaultSubjectId={selectedSubject?.id || null}
+        defaultEventType="test"
       />
     </div>
   )
