@@ -55,6 +55,7 @@ export default function TasksPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
+  const [allTasks, setAllTasks] = useState<Task[]>([]) // すべての課題を保持
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -68,14 +69,13 @@ export default function TasksPage() {
       try {
         const [tasksResult, subjectsResult] = await Promise.all([
           getTasks(session.user.id, {
-            status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
             search: searchQuery || undefined,
           }),
           getSubjects(session.user.id),
         ])
 
         if (tasksResult.success) {
-          setTasks(tasksResult.data as Task[])
+          setAllTasks(tasksResult.data as Task[])
         }
         if (subjectsResult.success) {
           setSubjects(subjectsResult.data as Subject[])
@@ -88,7 +88,7 @@ export default function TasksPage() {
     }
 
     fetchData()
-  }, [session?.user?.id, activeTab, searchQuery])
+  }, [session?.user?.id, searchQuery])
 
   // データ再取得の共通関数
   const fetchTasksData = async () => {
@@ -98,14 +98,13 @@ export default function TasksPage() {
     try {
       const [tasksResult, subjectsResult] = await Promise.all([
         getTasks(session.user.id, {
-          status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
           search: searchQuery || undefined,
         }),
         getSubjects(session.user.id),
       ])
 
       if (tasksResult.success) {
-        setTasks(tasksResult.data as Task[])
+        setAllTasks(tasksResult.data as Task[])
       }
       if (subjectsResult.success) {
         setSubjects(subjectsResult.data as Subject[])
@@ -122,7 +121,7 @@ export default function TasksPage() {
       const result = await updateTask({ id: taskId, status: newStatus })
       if (result.success) {
         // 状態を更新
-        setTasks((prev) =>
+        setAllTasks((prev) =>
           prev.map((task) =>
             task.id === taskId ? { ...task, status: newStatus } : task
           )
@@ -195,11 +194,16 @@ export default function TasksPage() {
     return colors[priority as keyof typeof colors] || colors[0]
   }
 
-  // タブのカウントを計算
+  // タブのカウントを計算（すべての課題から計算）
   const getTabCount = (status: TaskStatus | "all") => {
-    if (status === "all") return tasks.length
-    return tasks.filter((t) => t.status === status).length
+    if (status === "all") return allTasks.length
+    return allTasks.filter((t) => t.status === status).length
   }
+
+  // 表示する課題をフィルタリング
+  const filteredTasks = activeTab === "all"
+    ? allTasks
+    : allTasks.filter((t) => t.status === activeTab)
 
   const tabs = [
     { id: "not_started" as const, label: "未着手" },
@@ -283,9 +287,9 @@ export default function TasksPage() {
           <div className="text-center py-12">
             <p className="text-gray-500">読み込み中...</p>
           </div>
-        ) : tasks.length > 0 ? (
+        ) : filteredTasks.length > 0 ? (
           <div className="space-y-4">
-            {tasks.map((task) => {
+            {filteredTasks.map((task) => {
               const priority =
                 priorityLabels[task.priority as keyof typeof priorityLabels]
               const isUrgent = task.priority === 2
