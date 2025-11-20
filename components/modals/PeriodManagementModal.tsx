@@ -41,11 +41,6 @@ export function PeriodManagementModal({
 }: PeriodManagementModalProps) {
   const [periods, setPeriods] = useState<Period[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [editingPeriod, setEditingPeriod] = useState<string | null>(null)
-  const [editValues, setEditValues] = useState<{ startTime: string; endTime: string }>({
-    startTime: "",
-    endTime: "",
-  })
 
   useEffect(() => {
     if (open) {
@@ -118,40 +113,36 @@ export function PeriodManagementModal({
     }
   }
 
-  const handleEditPeriod = (period: Period) => {
-    setEditingPeriod(period.id)
-    setEditValues({
-      startTime: period.startTime,
-      endTime: period.endTime,
-    })
-  }
+  const handleTimeChange = async (periodId: string, field: 'startTime' | 'endTime', value: string) => {
+    // ローカルステートを即座に更新
+    setPeriods(prevPeriods =>
+      prevPeriods.map(p =>
+        p.id === periodId ? { ...p, [field]: value } : p
+      )
+    )
 
-  const handleSaveEdit = async (periodId: string) => {
-    setIsLoading(true)
+    // サーバーに保存
     try {
+      const period = periods.find(p => p.id === periodId)
+      if (!period) return
+
       const result = await updatePeriod({
         id: periodId,
-        startTime: editValues.startTime,
-        endTime: editValues.endTime,
+        startTime: field === 'startTime' ? value : period.startTime,
+        endTime: field === 'endTime' ? value : period.endTime,
       })
 
-      if (result.success) {
-        await loadPeriods()
-        setEditingPeriod(null)
-      } else {
+      if (!result.success) {
         alert(result.error || "時限の更新に失敗しました")
+        // エラーの場合は元の値に戻す
+        await loadPeriods()
       }
     } catch (error) {
       console.error("Failed to update period:", error)
       alert("時限の更新に失敗しました")
-    } finally {
-      setIsLoading(false)
+      // エラーの場合は元の値に戻す
+      await loadPeriods()
     }
-  }
-
-  const handleCancelEdit = () => {
-    setEditingPeriod(null)
-    setEditValues({ startTime: "", endTime: "" })
   }
 
   const handleDeletePeriod = async (periodId: string, periodNumber: number) => {
@@ -219,90 +210,45 @@ export function PeriodManagementModal({
               {periods.map((period) => (
                 <Card key={period.id}>
                   <CardContent className="pt-4">
-                    {editingPeriod === period.id ? (
-                      // 編集モード
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold min-w-[60px]">
-                            {period.periodNumber}限
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs">開始時刻</Label>
-                            <Input
-                              type="time"
-                              value={editValues.startTime}
-                              onChange={(e) =>
-                                setEditValues({
-                                  ...editValues,
-                                  startTime: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">終了時刻</Label>
-                            <Input
-                              type="time"
-                              value={editValues.endTime}
-                              onChange={(e) =>
-                                setEditValues({
-                                  ...editValues,
-                                  endTime: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleCancelEdit}
-                          >
-                            キャンセル
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSaveEdit(period.id)}
-                          >
-                            保存
-                          </Button>
-                        </div>
+                    <div className="flex items-center gap-4">
+                      <div className="font-semibold min-w-[60px]">
+                        {period.periodNumber}限
                       </div>
-                    ) : (
-                      // 表示モード
-                      <div className="flex items-center justify-between">
+                      <div className="flex-1 grid grid-cols-2 gap-3">
                         <div>
-                          <div className="font-semibold">
-                            {period.periodNumber}限
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {period.startTime} - {period.endTime}
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditPeriod(period)}
-                          >
-                            編集
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              handleDeletePeriod(period.id, period.periodNumber)
+                          <Label className="text-xs text-gray-600">開始時刻</Label>
+                          <Input
+                            type="time"
+                            value={period.startTime}
+                            onChange={(e) =>
+                              handleTimeChange(period.id, 'startTime', e.target.value)
                             }
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                            className="h-9"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-600">終了時刻</Label>
+                          <Input
+                            type="time"
+                            value={period.endTime}
+                            onChange={(e) =>
+                              handleTimeChange(period.id, 'endTime', e.target.value)
+                            }
+                            className="h-9"
+                          />
                         </div>
                       </div>
-                    )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          handleDeletePeriod(period.id, period.periodNumber)
+                        }
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

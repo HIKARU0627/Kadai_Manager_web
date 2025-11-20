@@ -20,13 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createEvent } from "@/app/actions/events"
+import { createEvent, EventType } from "@/app/actions/events"
 
 interface AddEventModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   userId: string
   initialDate?: Date
+  subjects?: Array<{ id: string; name: string; color: string }>
+  defaultSubjectId?: string | null
+  defaultEventType?: EventType
 }
 
 const predefinedColors = [
@@ -45,11 +48,16 @@ export function AddEventModal({
   onOpenChange,
   userId,
   initialDate,
+  subjects = [],
+  defaultSubjectId = null,
+  defaultEventType = "event",
 }: AddEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
+    eventType: defaultEventType as EventType,
+    subjectId: defaultSubjectId || "",
     title: "",
     description: "",
     startDatetime: "",
@@ -58,25 +66,35 @@ export function AddEventModal({
     color: "#10B981",
   })
 
-  // initialDateが変更されたら、フォームを初期化
+  // initialDate または defaultsが変更されたら、フォームを初期化
   useEffect(() => {
-    if (initialDate && open) {
-      const year = initialDate.getFullYear()
-      const month = String(initialDate.getMonth() + 1).padStart(2, '0')
-      const day = String(initialDate.getDate()).padStart(2, '0')
+    if (open) {
+      let startDatetime = ""
+      let endDatetime = ""
 
-      // 開始時刻を9:00に設定
-      const startDatetime = `${year}-${month}-${day}T09:00`
-      // 終了時刻を10:00に設定
-      const endDatetime = `${year}-${month}-${day}T10:00`
+      if (initialDate) {
+        const year = initialDate.getFullYear()
+        const month = String(initialDate.getMonth() + 1).padStart(2, '0')
+        const day = String(initialDate.getDate()).padStart(2, '0')
 
-      setFormData(prev => ({
-        ...prev,
+        // 開始時刻を9:00に設定
+        startDatetime = `${year}-${month}-${day}T09:00`
+        // 終了時刻を10:00に設定
+        endDatetime = `${year}-${month}-${day}T10:00`
+      }
+
+      setFormData({
+        eventType: defaultEventType as EventType,
+        subjectId: defaultSubjectId || "",
+        title: "",
+        description: "",
         startDatetime,
         endDatetime,
-      }))
+        location: "",
+        color: "#10B981",
+      })
     }
-  }, [initialDate, open])
+  }, [initialDate, open, defaultEventType, defaultSubjectId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,6 +105,13 @@ export function AddEventModal({
       // Validation
       if (!formData.title.trim()) {
         setError("タイトルを入力してください")
+        setIsSubmitting(false)
+        return
+      }
+
+      // テストの場合は科目が必須
+      if (formData.eventType === "test" && !formData.subjectId) {
+        setError("テストの場合は科目を選択してください")
         setIsSubmitting(false)
         return
       }
@@ -116,6 +141,8 @@ export function AddEventModal({
         userId,
         title: formData.title,
         description: formData.description || undefined,
+        eventType: formData.eventType,
+        subjectId: formData.subjectId || undefined,
         startDatetime: startDate,
         endDatetime: endDate,
         location: formData.location || undefined,
@@ -125,6 +152,8 @@ export function AddEventModal({
       if (result.success) {
         // Reset form
         setFormData({
+          eventType: "event",
+          subjectId: "",
           title: "",
           description: "",
           startDatetime: "",
@@ -148,14 +177,65 @@ export function AddEventModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>予定を追加</DialogTitle>
+          <DialogTitle>
+            {formData.eventType === "test" ? "テストを追加" : "予定を追加"}
+          </DialogTitle>
           <DialogDescription>
-            個人的な予定を登録します。すべての項目は後から編集できます。
+            {formData.eventType === "test"
+              ? "テストの日程を登録します。すべての項目は後から編集できます。"
+              : "個人的な予定を登録します。すべての項目は後から編集できます。"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* イベントタイプ選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="eventType">
+                種類 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.eventType}
+                onValueChange={(value: EventType) =>
+                  setFormData({ ...formData, eventType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="event">予定</SelectItem>
+                  <SelectItem value="test">テスト</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 科目選択 (テストの場合のみ表示) */}
+            {formData.eventType === "test" && (
+              <div className="grid gap-2">
+                <Label htmlFor="subject">
+                  科目 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.subjectId}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, subjectId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="科目を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* タイトル */}
             <div className="grid gap-2">
               <Label htmlFor="title">
@@ -167,7 +247,11 @@ export function AddEventModal({
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder="例: 歯医者の予約"
+                placeholder={
+                  formData.eventType === "test"
+                    ? "例: 中間テスト"
+                    : "例: 歯医者の予約"
+                }
                 required
               />
             </div>
@@ -228,7 +312,11 @@ export function AddEventModal({
                 onChange={(e) =>
                   setFormData({ ...formData, location: e.target.value })
                 }
-                placeholder="例: 中央歯科クリニック"
+                placeholder={
+                  formData.eventType === "test"
+                    ? "例: A棟201教室"
+                    : "例: 中央歯科クリニック"
+                }
               />
             </div>
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
 export type TaskStatus = "not_started" | "in_progress" | "completed"
+export type TaskType = "assignment" | "quiz"
 
 export interface CreateTaskInput {
   userId: string
@@ -13,6 +14,7 @@ export interface CreateTaskInput {
   dueDate: Date
   status?: TaskStatus
   priority?: number
+  taskType?: TaskType
 }
 
 export interface UpdateTaskInput {
@@ -23,6 +25,7 @@ export interface UpdateTaskInput {
   status?: TaskStatus
   priority?: number
   subjectId?: string
+  taskType?: TaskType
 }
 
 // 課題を作成
@@ -37,6 +40,7 @@ export async function createTask(input: CreateTaskInput) {
         dueDate: input.dueDate,
         status: input.status || "not_started",
         priority: input.priority || 0,
+        taskType: input.taskType || "assignment",
       },
       include: {
         subject: true,
@@ -69,6 +73,7 @@ export async function updateTask(input: UpdateTaskInput) {
     }
     if (input.priority !== undefined) updateData.priority = input.priority
     if (input.subjectId !== undefined) updateData.subjectId = input.subjectId
+    if (input.taskType !== undefined) updateData.taskType = input.taskType
 
     updateData.updatedAt = new Date()
 

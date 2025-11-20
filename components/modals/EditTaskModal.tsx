@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { updateTask } from "@/app/actions/tasks"
+import { updateTask, TaskType } from "@/app/actions/tasks"
 
 interface EditTaskModalProps {
   open: boolean
@@ -34,6 +34,7 @@ interface EditTaskModalProps {
     dueDate: Date
     priority: number
     status: string
+    taskType: string
   } | null
 }
 
@@ -53,6 +54,7 @@ export function EditTaskModal({
     dueDate: "",
     priority: "0",
     status: "not_started",
+    taskType: "assignment" as TaskType,
   })
 
   // task が変更されたときにフォームデータを更新
@@ -74,6 +76,7 @@ export function EditTaskModal({
         dueDate: formattedDueDate,
         priority: String(task.priority),
         status: task.status,
+        taskType: (task.taskType || "assignment") as TaskType,
       })
     }
   }, [task])
@@ -107,6 +110,7 @@ export function EditTaskModal({
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
         status: formData.status as "not_started" | "in_progress" | "completed",
+        taskType: formData.taskType,
       })
 
       if (result.success) {
@@ -136,6 +140,27 @@ export function EditTaskModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* 種類選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="taskType">
+                種類 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.taskType}
+                onValueChange={(value: TaskType) =>
+                  setFormData({ ...formData, taskType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assignment">課題</SelectItem>
+                  <SelectItem value="quiz">小テスト</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* タイトル */}
             <div className="grid gap-2">
               <Label htmlFor="title">
@@ -147,7 +172,11 @@ export function EditTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder="例: レポート: 微分積分の応用"
+                placeholder={
+                  formData.taskType === "quiz"
+                    ? "例: 第3章 小テスト"
+                    : "例: レポート: 微分積分の応用"
+                }
                 required
               />
             </div>

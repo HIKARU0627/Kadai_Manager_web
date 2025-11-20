@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { updateEvent } from "@/app/actions/events"
+import { updateEvent, EventType } from "@/app/actions/events"
 
 interface EditEventModalProps {
   open: boolean
@@ -29,11 +29,14 @@ interface EditEventModalProps {
     id: string
     title: string
     description: string | null
+    eventType?: EventType
+    subjectId?: string | null
     startDatetime: Date
     endDatetime: Date
     location: string | null
     color: string
   } | null
+  subjects?: Array<{ id: string; name: string; color: string }>
 }
 
 const predefinedColors = [
@@ -51,11 +54,14 @@ export function EditEventModal({
   open,
   onOpenChange,
   event,
+  subjects = [],
 }: EditEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
+    eventType: "event" as EventType,
+    subjectId: "",
     title: "",
     description: "",
     startDatetime: "",
@@ -79,6 +85,8 @@ export function EditEventModal({
       }
 
       setFormData({
+        eventType: event.eventType || "event",
+        subjectId: event.subjectId || "",
         title: event.title,
         description: event.description || "",
         startDatetime: formatDateTime(event.startDatetime),
@@ -100,6 +108,13 @@ export function EditEventModal({
       // Validation
       if (!formData.title.trim()) {
         setError("タイトルを入力してください")
+        setIsSubmitting(false)
+        return
+      }
+
+      // テストの場合は科目が必須
+      if (formData.eventType === "test" && !formData.subjectId) {
+        setError("テストの場合は科目を選択してください")
         setIsSubmitting(false)
         return
       }
@@ -129,6 +144,8 @@ export function EditEventModal({
         id: event.id,
         title: formData.title,
         description: formData.description || undefined,
+        eventType: formData.eventType,
+        subjectId: formData.subjectId || undefined,
         startDatetime: startDate,
         endDatetime: endDate,
         location: formData.location || undefined,
@@ -154,14 +171,65 @@ export function EditEventModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>予定を編集</DialogTitle>
+          <DialogTitle>
+            {formData.eventType === "test" ? "テストを編集" : "予定を編集"}
+          </DialogTitle>
           <DialogDescription>
-            予定の情報を編集します。変更を保存するには「更新」をクリックしてください。
+            {formData.eventType === "test"
+              ? "テストの情報を編集します。変更を保存するには「更新」をクリックしてください。"
+              : "予定の情報を編集します。変更を保存するには「更新」をクリックしてください。"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* イベントタイプ選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="eventType">
+                種類 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.eventType}
+                onValueChange={(value: EventType) =>
+                  setFormData({ ...formData, eventType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="event">予定</SelectItem>
+                  <SelectItem value="test">テスト</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 科目選択 (テストの場合のみ表示) */}
+            {formData.eventType === "test" && (
+              <div className="grid gap-2">
+                <Label htmlFor="subject">
+                  科目 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.subjectId}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, subjectId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="科目を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* タイトル */}
             <div className="grid gap-2">
               <Label htmlFor="title">
@@ -173,7 +241,11 @@ export function EditEventModal({
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder="例: 歯医者の予約"
+                placeholder={
+                  formData.eventType === "test"
+                    ? "例: 中間テスト"
+                    : "例: 歯医者の予約"
+                }
                 required
               />
             </div>
@@ -234,7 +306,11 @@ export function EditEventModal({
                 onChange={(e) =>
                   setFormData({ ...formData, location: e.target.value })
                 }
-                placeholder="例: 中央歯科クリニック"
+                placeholder={
+                  formData.eventType === "test"
+                    ? "例: A棟201教室"
+                    : "例: 中央歯科クリニック"
+                }
               />
             </div>
 

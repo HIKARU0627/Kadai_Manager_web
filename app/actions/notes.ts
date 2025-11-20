@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-export type NoteType = "general" | "quiz" | "announcement"
+export type NoteType = "general" | "announcement"
 
 export interface CreateNoteInput {
   userId: string
@@ -11,7 +11,6 @@ export interface CreateNoteInput {
   title?: string
   content: string
   noteType?: NoteType
-  quizDate?: Date
 }
 
 export interface UpdateNoteInput {
@@ -19,7 +18,6 @@ export interface UpdateNoteInput {
   title?: string
   content?: string
   noteType?: NoteType
-  quizDate?: Date
   subjectId?: string
 }
 
@@ -33,7 +31,6 @@ export async function createNote(input: CreateNoteInput) {
         title: input.title,
         content: input.content,
         noteType: input.noteType || "general",
-        quizDate: input.quizDate,
       },
       include: {
         subject: true,
@@ -57,7 +54,6 @@ export async function updateNote(input: UpdateNoteInput) {
     if (input.title !== undefined) updateData.title = input.title
     if (input.content !== undefined) updateData.content = input.content
     if (input.noteType !== undefined) updateData.noteType = input.noteType
-    if (input.quizDate !== undefined) updateData.quizDate = input.quizDate
     if (input.subjectId !== undefined) updateData.subjectId = input.subjectId
 
     const note = await prisma.note.update({

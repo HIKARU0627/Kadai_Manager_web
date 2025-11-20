@@ -3,10 +3,14 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
+export type EventType = "event" | "test"
+
 export interface CreateEventInput {
   userId: string
   title: string
   description?: string
+  eventType?: EventType
+  subjectId?: string
   startDatetime: Date
   endDatetime: Date
   location?: string
@@ -17,6 +21,8 @@ export interface UpdateEventInput {
   id: string
   title?: string
   description?: string
+  eventType?: EventType
+  subjectId?: string
   startDatetime?: Date
   endDatetime?: Date
   location?: string
@@ -31,6 +37,8 @@ export async function createEvent(input: CreateEventInput) {
         userId: input.userId,
         title: input.title,
         description: input.description,
+        eventType: input.eventType || "event",
+        subjectId: input.subjectId,
         startDatetime: input.startDatetime,
         endDatetime: input.endDatetime,
         location: input.location,
@@ -39,6 +47,7 @@ export async function createEvent(input: CreateEventInput) {
     })
 
     revalidatePath("/calendar")
+    revalidatePath("/subjects")
     revalidatePath("/")
 
     return { success: true, data: event }
@@ -55,6 +64,8 @@ export async function updateEvent(input: UpdateEventInput) {
 
     if (input.title !== undefined) updateData.title = input.title
     if (input.description !== undefined) updateData.description = input.description
+    if (input.eventType !== undefined) updateData.eventType = input.eventType
+    if (input.subjectId !== undefined) updateData.subjectId = input.subjectId
     if (input.startDatetime !== undefined) updateData.startDatetime = input.startDatetime
     if (input.endDatetime !== undefined) updateData.endDatetime = input.endDatetime
     if (input.location !== undefined) updateData.location = input.location
@@ -66,6 +77,7 @@ export async function updateEvent(input: UpdateEventInput) {
     })
 
     revalidatePath("/calendar")
+    revalidatePath("/subjects")
     revalidatePath("/")
 
     return { success: true, data: event }
@@ -83,6 +95,7 @@ export async function deleteEvent(id: string) {
     })
 
     revalidatePath("/calendar")
+    revalidatePath("/subjects")
     revalidatePath("/")
 
     return { success: true }

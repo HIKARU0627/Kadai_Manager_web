@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createTask } from "@/app/actions/tasks"
+import { createTask, TaskType } from "@/app/actions/tasks"
 import { Upload, X, FileIcon } from "lucide-react"
 
 interface AddTaskModalProps {
@@ -47,6 +47,7 @@ export function AddTaskModal({
     subjectId: "none",
     dueDate: "",
     priority: "0",
+    taskType: "assignment" as TaskType,
   })
 
   // ファイル選択ハンドラー
@@ -102,6 +103,7 @@ export function AddTaskModal({
         subjectId: formData.subjectId === "none" ? undefined : formData.subjectId,
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
+        taskType: formData.taskType,
       })
 
       if (result.success && result.data) {
@@ -139,6 +141,7 @@ export function AddTaskModal({
           subjectId: "none",
           dueDate: "",
           priority: "0",
+          taskType: "assignment",
         })
         setSelectedFiles([])
         setUploadProgress("")
@@ -166,6 +169,27 @@ export function AddTaskModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* 種類選択 */}
+            <div className="grid gap-2">
+              <Label htmlFor="taskType">
+                種類 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.taskType}
+                onValueChange={(value: TaskType) =>
+                  setFormData({ ...formData, taskType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assignment">課題</SelectItem>
+                  <SelectItem value="quiz">小テスト</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* タイトル */}
             <div className="grid gap-2">
               <Label htmlFor="title">
@@ -177,7 +201,11 @@ export function AddTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder="例: レポート: 微分積分の応用"
+                placeholder={
+                  formData.taskType === "quiz"
+                    ? "例: 第3章 小テスト"
+                    : "例: レポート: 微分積分の応用"
+                }
                 required
               />
             </div>

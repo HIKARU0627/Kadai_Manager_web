@@ -46,7 +46,6 @@ export function AddNoteModal({
     title: "",
     content: "",
     noteType: "general" as NoteType,
-    quizDate: "",
   })
 
   // ファイル選択ハンドラー
@@ -95,19 +94,12 @@ export function AddNoteModal({
         return
       }
 
-      if (formData.noteType === "quiz" && !formData.quizDate) {
-        setError("小テストの日付を設定してください")
-        setIsSubmitting(false)
-        return
-      }
-
       const result = await createNote({
         userId,
         subjectId: formData.subjectId,
         title: formData.title || undefined,
         content: formData.content,
         noteType: formData.noteType,
-        quizDate: formData.quizDate ? new Date(formData.quizDate) : undefined,
       })
 
       if (result.success && result.data) {
@@ -144,7 +136,6 @@ export function AddNoteModal({
           title: "",
           content: "",
           noteType: "general",
-          quizDate: "",
         })
         setSelectedFiles([])
         setUploadProgress("")
@@ -166,7 +157,7 @@ export function AddNoteModal({
         <DialogHeader>
           <DialogTitle>授業メモを追加</DialogTitle>
           <DialogDescription>
-            授業のメモ、小テスト日程、お知らせを登録します。
+            授業のメモやお知らせを登録します。
           </DialogDescription>
         </DialogHeader>
 
@@ -212,7 +203,6 @@ export function AddNoteModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="general">メモ</SelectItem>
-                  <SelectItem value="quiz">小テスト</SelectItem>
                   <SelectItem value="announcement">お知らせ</SelectItem>
                 </SelectContent>
               </Select>
@@ -227,11 +217,7 @@ export function AddNoteModal({
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder={
-                  formData.noteType === "quiz"
-                    ? "例: 第3章の小テスト"
-                    : "例: 重要な公式まとめ"
-                }
+                placeholder="例: 重要な公式まとめ"
               />
             </div>
 
@@ -251,24 +237,6 @@ export function AddNoteModal({
                 required
               />
             </div>
-
-            {/* 小テスト日付（小テストの場合のみ表示） */}
-            {formData.noteType === "quiz" && (
-              <div className="grid gap-2">
-                <Label htmlFor="quizDate">
-                  小テスト日 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="quizDate"
-                  type="date"
-                  value={formData.quizDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quizDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            )}
 
             {/* ファイル添付 */}
             <div className="grid gap-2">
