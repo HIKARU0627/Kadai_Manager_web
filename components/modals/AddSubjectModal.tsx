@@ -73,6 +73,7 @@ export function AddSubjectModal({
   const [formData, setFormData] = useState({
     semesterId: defaultSemesterId || "none",
     name: "",
+    type: "regular",
     teacher: "",
     classroom: "",
     dayOfWeek: "",
@@ -123,26 +124,30 @@ export function AddSubjectModal({
         return
       }
 
-      if (!formData.dayOfWeek) {
-        setError("曜日を選択してください")
-        setIsSubmitting(false)
-        return
-      }
+      // 通常授業の場合は曜日と時限が必須
+      if (formData.type === "regular") {
+        if (!formData.dayOfWeek) {
+          setError("通常授業の場合は曜日を選択してください")
+          setIsSubmitting(false)
+          return
+        }
 
-      if (!formData.period) {
-        setError("時限を選択してください")
-        setIsSubmitting(false)
-        return
+        if (!formData.period) {
+          setError("通常授業の場合は時限を選択してください")
+          setIsSubmitting(false)
+          return
+        }
       }
 
       const result = await createSubject({
         userId,
         semesterId: formData.semesterId !== "none" ? formData.semesterId : undefined,
         name: formData.name,
+        type: formData.type,
         teacher: formData.teacher || undefined,
         classroom: formData.classroom || undefined,
-        dayOfWeek: parseInt(formData.dayOfWeek),
-        period: parseInt(formData.period),
+        dayOfWeek: formData.dayOfWeek ? parseInt(formData.dayOfWeek) : undefined,
+        period: formData.period ? parseInt(formData.period) : undefined,
         color: formData.color,
       })
 
@@ -151,6 +156,7 @@ export function AddSubjectModal({
         setFormData({
           semesterId: defaultSemesterId || "none",
           name: "",
+          type: "regular",
           teacher: "",
           classroom: "",
           dayOfWeek: "",
@@ -221,54 +227,77 @@ export function AddSubjectModal({
               />
             </div>
 
-            {/* 曜日と時限 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="dayOfWeek">
-                  曜日 <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.dayOfWeek}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, dayOfWeek: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="曜日を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {weekDays.map((day) => (
-                      <SelectItem key={day.value} value={String(day.value)}>
-                        {day.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="period">
-                  時限 <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.period}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, period: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="時限を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periods.map((period) => (
-                      <SelectItem key={period.value} value={String(period.value)}>
-                        {period.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* 授業タイプ */}
+            <div className="grid gap-2">
+              <Label htmlFor="type">授業タイプ</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, type: value, dayOfWeek: "", period: "" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="regular">通常授業</SelectItem>
+                  <SelectItem value="intensive">集中講義</SelectItem>
+                  <SelectItem value="on_demand">オンデマンド</SelectItem>
+                  <SelectItem value="other">その他</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* 曜日と時限（通常授業の場合のみ） */}
+            {formData.type === "regular" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="dayOfWeek">
+                    曜日 <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.dayOfWeek}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, dayOfWeek: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="曜日を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {weekDays.map((day) => (
+                        <SelectItem key={day.value} value={String(day.value)}>
+                          {day.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="period">
+                    時限 <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.period}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, period: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="時限を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {periods.map((period) => (
+                        <SelectItem key={period.value} value={String(period.value)}>
+                          {period.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {/* 担当教員 */}
             <div className="grid gap-2">
