@@ -97,9 +97,9 @@ export async function updateSemester(
 }
 
 /**
- * 学期を削除
+ * 学期の関連データをカウント
  */
-export async function deleteSemester(id: string) {
+export async function getSemesterRelatedData(id: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     throw new Error('認証が必要です');
@@ -113,12 +113,121 @@ export async function deleteSemester(id: string) {
     throw new Error('ユーザーが見つかりません');
   }
 
-  await prisma.semester.delete({
-    where: { id, userId: user.id },
+  // この学期に紐づく科目を取得
+  const subjects = await prisma.subject.findMany({
+    where: { semesterId: id, userId: user.id },
+    select: { id: true },
   });
+
+  const subjectIds = subjects.map((s: { id: string }) => s.id);
+
+  // 関連データをカウント
+  const [tasksCount, eventsCount, notesCount, filesCount] = await Promise.all([
+    prisma.task.count({
+      where: { subjectId: { in: subjectIds } },
+    }),
+    prisma.event.count({
+      where: { subjectId: { in: subjectIds } },
+    }),
+    prisma.note.count({
+      where: { subjectId: { in: subjectIds } },
+    }),
+    prisma.file.count({
+      where: { subjectId: { in: subjectIds } },
+    }),
+  ]);
+
+  return {
+    subjectsCount: subjects.length,
+    tasksCount,
+    eventsCount,
+    notesCount,
+    filesCount,
+  };
+}
+
+/**
+ * 学期を削除（カスケード削除オプション付き）
+ */
+export async function deleteSemester(id: string, cascadeDelete: boolean = false) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    throw new Error('認証が必要です');
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user) {
+    throw new Error('ユーザーが見つかりません');
+  }
+
+  if (cascadeDelete) {
+    // カスケード削除: 科目とその関連データを削除
+    const subjects = await prisma.subject.findMany({
+      where: { semesterId: id, userId: user.id },
+      select: { id: true },
+    });
+
+    const subjectIds = subjects.map((s: { id: string }) => s.id);
+
+    // トランザクションで一括削除
+    await prisma.$transaction([
+      // 課題に紐づくファイルとリマインダーを削除
+      prisma.file.deleteMany({
+        where: { task: { subjectId: { in: subjectIds } } },
+      }),
+      prisma.reminder.deleteMany({
+        where: { task: { subjectId: { in: subjectIds } } },
+      }),
+      // 課題を削除
+      prisma.task.deleteMany({
+        where: { subjectId: { in: subjectIds } },
+      }),
+      // イベントのリマインダーを削除
+      prisma.reminder.deleteMany({
+        where: { event: { subjectId: { in: subjectIds } } },
+      }),
+      // イベントを削除
+      prisma.event.deleteMany({
+        where: { subjectId: { in: subjectIds } },
+      }),
+      // ノートに紐づくファイルとリマインダーを削除
+      prisma.file.deleteMany({
+        where: { note: { subjectId: { in: subjectIds } } },
+      }),
+      prisma.reminder.deleteMany({
+        where: { note: { subjectId: { in: subjectIds } } },
+      }),
+      // ノートを削除（これは onDelete: Cascade で自動削除されるが明示的に実行）
+      prisma.note.deleteMany({
+        where: { subjectId: { in: subjectIds } },
+      }),
+      // 科目に紐づくファイルを削除
+      prisma.file.deleteMany({
+        where: { subjectId: { in: subjectIds } },
+      }),
+      // 科目を削除
+      prisma.subject.deleteMany({
+        where: { id: { in: subjectIds } },
+      }),
+      // 学期を削除
+      prisma.semester.delete({
+        where: { id, userId: user.id },
+      }),
+    ]);
+  } else {
+    // 通常の削除: 科目のsemesterIdをnullに設定（デフォルトの onDelete: SetNull 動作）
+    await prisma.semester.delete({
+      where: { id, userId: user.id },
+    });
+  }
 
   revalidatePath('/settings');
   revalidatePath('/subjects');
+  revalidatePath('/tasks');
+  revalidatePath('/');
 }
 
 /**

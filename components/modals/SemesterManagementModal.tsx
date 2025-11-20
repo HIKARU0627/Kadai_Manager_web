@@ -12,7 +12,9 @@ import {
   updateSemester,
   deleteSemester,
   setActiveSemester,
+  getSemesterRelatedData,
 } from '@/app/actions/semesters';
+import { SemesterDeleteConfirmDialog } from '@/components/ui/semester-delete-confirm-dialog';
 
 interface Semester {
   id: string;
@@ -45,6 +47,16 @@ export default function SemesterManagementModal({
     startDate: '',
     endDate: '',
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [semesterToDelete, setSemesterToDelete] = useState<Semester | null>(null);
+  const [relatedData, setRelatedData] = useState<{
+    subjectsCount: number;
+    tasksCount: number;
+    eventsCount: number;
+    notesCount: number;
+    filesCount: number;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -96,14 +108,31 @@ export default function SemesterManagementModal({
     }
   };
 
-  const handleDeleteSemester = async (id: string) => {
-    if (!confirm('この学期を削除しますか？関連する教科の学期情報も削除されます。')) {
-      return;
-    }
-
+  const handleDeleteClick = async (semester: Semester) => {
+    // 関連データを取得
     setIsLoading(true);
     try {
-      await deleteSemester(id);
+      const data = await getSemesterRelatedData(semester.id);
+      setRelatedData(data);
+      setSemesterToDelete(semester);
+      setDeleteDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to get related data:', error);
+      alert('関連データの取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async (cascadeDelete: boolean) => {
+    if (!semesterToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteSemester(semesterToDelete.id, cascadeDelete);
+      setDeleteDialogOpen(false);
+      setSemesterToDelete(null);
+      setRelatedData(null);
       await loadSemesters();
       onSemesterChange?.();
       // 他のコンポーネントに学期が更新されたことを通知
@@ -112,7 +141,7 @@ export default function SemesterManagementModal({
       console.error('Failed to delete semester:', error);
       alert('学期の削除に失敗しました');
     } finally {
-      setIsLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -242,7 +271,7 @@ export default function SemesterManagementModal({
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleDeleteSemester(semester.id)}
+                      onClick={() => handleDeleteClick(semester)}
                       disabled={isLoading}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -254,6 +283,20 @@ export default function SemesterManagementModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* 削除確認ダイアログ */}
+      <SemesterDeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        semesterName={
+          semesterToDelete
+            ? `${semesterToDelete.year}年度 ${semesterToDelete.name}`
+            : ''
+        }
+        relatedData={relatedData}
+        isDeleting={isDeleting}
+      />
     </Dialog>
   );
 }
