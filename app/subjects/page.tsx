@@ -51,6 +51,8 @@ export default function SubjectsPage() {
   const [periods, setPeriods] = useState<Period[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [defaultDayOfWeek, setDefaultDayOfWeek] = useState<number | null>(null)
+  const [defaultPeriod, setDefaultPeriod] = useState<number | null>(null)
 
   // データの取得
   useEffect(() => {
@@ -109,6 +111,9 @@ export default function SubjectsPage() {
     setIsAddModalOpen(open)
     if (!open) {
       await fetchScheduleData()
+      // デフォルト値をクリア
+      setDefaultDayOfWeek(null)
+      setDefaultPeriod(null)
     }
   }
 
@@ -257,7 +262,11 @@ export default function SubjectsPage() {
                               <Button
                                 variant="ghost"
                                 className="w-full h-full text-gray-400 hover:text-gray-600"
-                                onClick={() => setIsAddModalOpen(true)}
+                                onClick={() => {
+                                  setDefaultDayOfWeek(dayOfWeek)
+                                  setDefaultPeriod(period.periodNumber)
+                                  setIsAddModalOpen(true)
+                                }}
                               >
                                 <Plus className="w-4 h-4" />
                               </Button>
@@ -374,6 +383,8 @@ export default function SubjectsPage() {
         onOpenChange={handleAddModalClose}
         userId={session?.user?.id || ""}
         defaultSemesterId={selectedSemesterId}
+        defaultDayOfWeek={defaultDayOfWeek}
+        defaultPeriod={defaultPeriod}
       />
 
       {/* 科目編集モーダル */}

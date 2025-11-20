@@ -27,6 +27,8 @@ interface AddSubjectModalProps {
   onOpenChange: (open: boolean) => void
   userId: string
   defaultSemesterId?: string | null
+  defaultDayOfWeek?: number | null
+  defaultPeriod?: number | null
 }
 
 const weekDays = [
@@ -65,6 +67,8 @@ export function AddSubjectModal({
   onOpenChange,
   userId,
   defaultSemesterId,
+  defaultDayOfWeek,
+  defaultPeriod,
 }: AddSubjectModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,11 +88,14 @@ export function AddSubjectModal({
   useEffect(() => {
     if (open) {
       loadSemesters()
-      if (defaultSemesterId) {
-        setFormData(prev => ({ ...prev, semesterId: defaultSemesterId }))
-      }
+      setFormData(prev => ({
+        ...prev,
+        semesterId: defaultSemesterId || "none",
+        dayOfWeek: defaultDayOfWeek !== null ? String(defaultDayOfWeek) : "",
+        period: defaultPeriod !== null ? String(defaultPeriod) : "",
+      }))
     }
-  }, [open, defaultSemesterId])
+  }, [open, defaultSemesterId, defaultDayOfWeek, defaultPeriod])
 
   // 学期更新イベントをリッスン
   useEffect(() => {
