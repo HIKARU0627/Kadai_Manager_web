@@ -6,6 +6,13 @@ import { useSession, signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Home,
   Calendar,
   CheckSquare,
@@ -46,11 +53,6 @@ const navItems = [
     title: "ファイル管理",
     href: "/files",
     icon: FolderOpen,
-  },
-  {
-    title: "設定",
-    href: "/settings",
-    icon: Settings,
   },
 ]
 
@@ -98,34 +100,38 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+      <div className="p-4 border-t border-gray-200 bg-white">
         {session?.user && (
-          <>
-            <Link
-              href="/settings"
-              className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                {userInitial}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                  {userInitial}
+                </div>
+                <div className="ml-3 flex-1 overflow-hidden">
+                  <p className="font-medium text-gray-700 truncate">
+                    {session.user.name || session.user.username}
+                  </p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {session.user.email}
+                  </p>
+                </div>
               </div>
-              <div className="ml-3 flex-1 overflow-hidden">
-                <p className="font-medium text-gray-700 truncate">
-                  {session.user.name || session.user.username}
-                </p>
-                <p className="text-sm text-gray-500 truncate">
-                  {session.user.email}
-                </p>
-              </div>
-            </Link>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              ログアウト
-            </Button>
-          </>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center cursor-pointer">
+                  <Settings className="w-4 h-4 mr-2" />
+                  設定
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                <LogOut className="w-4 h-4 mr-2" />
+                ログアウト
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </aside>
