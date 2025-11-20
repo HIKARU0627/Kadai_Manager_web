@@ -63,6 +63,8 @@ model Task {
   dueDate     DateTime
   status      String    @default("not_started") // not_started, in_progress, completed
   priority    Int       @default(0) // 0=低, 1=中, 2=高
+  taskType    String    @default("assignment") // assignment, quiz
+  quizDate    DateTime? // 小テストの日付
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
@@ -99,8 +101,7 @@ model Note {
   subjectId String
   title     String?
   content   String
-  noteType  String    @default("general") // general, quiz, announcement
-  quizDate  DateTime?
+  noteType  String    @default("general") // general, announcement
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

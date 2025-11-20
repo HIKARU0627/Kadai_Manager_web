@@ -31,7 +31,6 @@ interface EditNoteModalProps {
     title: string | null
     content: string
     noteType: string
-    quizDate: Date | null
     subject: {
       id: string
       name: string
@@ -54,28 +53,16 @@ export function EditNoteModal({
     title: "",
     content: "",
     noteType: "general" as NoteType,
-    quizDate: "",
   })
 
   // note が変更されたときにフォームデータを更新
   useEffect(() => {
     if (note) {
-      // quizDateをdate形式に変換
-      let formattedQuizDate = ""
-      if (note.quizDate) {
-        const quizDateObj = new Date(note.quizDate)
-        const year = quizDateObj.getFullYear()
-        const month = String(quizDateObj.getMonth() + 1).padStart(2, '0')
-        const day = String(quizDateObj.getDate()).padStart(2, '0')
-        formattedQuizDate = `${year}-${month}-${day}`
-      }
-
       setFormData({
         subjectId: note.subject.id,
         title: note.title || "",
         content: note.content,
         noteType: note.noteType as NoteType,
-        quizDate: formattedQuizDate,
       })
     }
   }, [note])
@@ -101,19 +88,12 @@ export function EditNoteModal({
         return
       }
 
-      if (formData.noteType === "quiz" && !formData.quizDate) {
-        setError("小テストの日付を設定してください")
-        setIsSubmitting(false)
-        return
-      }
-
       const result = await updateNote({
         id: note.id,
         subjectId: formData.subjectId,
         title: formData.title || undefined,
         content: formData.content,
         noteType: formData.noteType,
-        quizDate: formData.quizDate ? new Date(formData.quizDate) : undefined,
       })
 
       if (result.success) {
@@ -211,29 +191,10 @@ export function EditNoteModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="general">一般</SelectItem>
-                  <SelectItem value="quiz">小テスト</SelectItem>
                   <SelectItem value="announcement">お知らせ</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            {/* 小テスト日付 */}
-            {formData.noteType === "quiz" && (
-              <div className="grid gap-2">
-                <Label htmlFor="quizDate">
-                  小テスト日付 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="quizDate"
-                  type="date"
-                  value={formData.quizDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quizDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            )}
 
             {/* エラーメッセージ */}
             {error && (
