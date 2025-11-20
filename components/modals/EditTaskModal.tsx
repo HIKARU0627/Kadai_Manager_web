@@ -35,7 +35,6 @@ interface EditTaskModalProps {
     priority: number
     status: string
     taskType: string
-    quizDate: Date | null
   } | null
 }
 
@@ -56,7 +55,6 @@ export function EditTaskModal({
     priority: "0",
     status: "not_started",
     taskType: "assignment" as TaskType,
-    quizDate: "",
   })
 
   // task が変更されたときにフォームデータを更新
@@ -71,16 +69,6 @@ export function EditTaskModal({
       const minutes = String(dueDateObj.getMinutes()).padStart(2, '0')
       const formattedDueDate = `${year}-${month}-${day}T${hours}:${minutes}`
 
-      // quizDateをdate形式に変換
-      let formattedQuizDate = ""
-      if (task.quizDate) {
-        const quizDateObj = new Date(task.quizDate)
-        const qYear = quizDateObj.getFullYear()
-        const qMonth = String(quizDateObj.getMonth() + 1).padStart(2, '0')
-        const qDay = String(quizDateObj.getDate()).padStart(2, '0')
-        formattedQuizDate = `${qYear}-${qMonth}-${qDay}`
-      }
-
       setFormData({
         title: task.title,
         description: task.description || "",
@@ -89,7 +77,6 @@ export function EditTaskModal({
         priority: String(task.priority),
         status: task.status,
         taskType: (task.taskType || "assignment") as TaskType,
-        quizDate: formattedQuizDate,
       })
     }
   }, [task])
@@ -115,12 +102,6 @@ export function EditTaskModal({
         return
       }
 
-      if (formData.taskType === "quiz" && !formData.quizDate) {
-        setError("小テストの日付を設定してください")
-        setIsSubmitting(false)
-        return
-      }
-
       const result = await updateTask({
         id: task.id,
         title: formData.title,
@@ -130,7 +111,6 @@ export function EditTaskModal({
         priority: parseInt(formData.priority),
         status: formData.status as "not_started" | "in_progress" | "completed",
         taskType: formData.taskType,
-        quizDate: formData.quizDate ? new Date(formData.quizDate) : undefined,
       })
 
       if (result.success) {
@@ -238,28 +218,10 @@ export function EditTaskModal({
               </Select>
             </div>
 
-            {/* 小テスト日（小テストの場合のみ） */}
-            {formData.taskType === "quiz" && (
-              <div className="grid gap-2">
-                <Label htmlFor="quizDate">
-                  小テスト日 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="quizDate"
-                  type="date"
-                  value={formData.quizDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quizDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            )}
-
             {/* 締め切り日時 */}
             <div className="grid gap-2">
               <Label htmlFor="dueDate">
-                {formData.taskType === "quiz" ? "提出締め切り" : "締め切り日時"} <span className="text-red-500">*</span>
+                締め切り日時 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="dueDate"

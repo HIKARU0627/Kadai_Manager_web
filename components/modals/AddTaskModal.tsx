@@ -48,7 +48,6 @@ export function AddTaskModal({
     dueDate: "",
     priority: "0",
     taskType: "assignment" as TaskType,
-    quizDate: "",
   })
 
   // ファイル選択ハンドラー
@@ -97,12 +96,6 @@ export function AddTaskModal({
         return
       }
 
-      if (formData.taskType === "quiz" && !formData.quizDate) {
-        setError("小テストの日付を設定してください")
-        setIsSubmitting(false)
-        return
-      }
-
       const result = await createTask({
         userId,
         title: formData.title,
@@ -111,7 +104,6 @@ export function AddTaskModal({
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
         taskType: formData.taskType,
-        quizDate: formData.quizDate ? new Date(formData.quizDate) : undefined,
       })
 
       if (result.success && result.data) {
@@ -150,7 +142,6 @@ export function AddTaskModal({
           dueDate: "",
           priority: "0",
           taskType: "assignment",
-          quizDate: "",
         })
         setSelectedFiles([])
         setUploadProgress("")
@@ -256,28 +247,10 @@ export function AddTaskModal({
               </Select>
             </div>
 
-            {/* 小テスト日（小テストの場合のみ） */}
-            {formData.taskType === "quiz" && (
-              <div className="grid gap-2">
-                <Label htmlFor="quizDate">
-                  小テスト日 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="quizDate"
-                  type="date"
-                  value={formData.quizDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quizDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            )}
-
             {/* 締め切り日時 */}
             <div className="grid gap-2">
               <Label htmlFor="dueDate">
-                {formData.taskType === "quiz" ? "提出締め切り" : "締め切り日時"} <span className="text-red-500">*</span>
+                締め切り日時 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="dueDate"

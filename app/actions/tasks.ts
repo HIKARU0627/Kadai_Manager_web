@@ -15,7 +15,6 @@ export interface CreateTaskInput {
   status?: TaskStatus
   priority?: number
   taskType?: TaskType
-  quizDate?: Date
 }
 
 export interface UpdateTaskInput {
@@ -27,7 +26,6 @@ export interface UpdateTaskInput {
   priority?: number
   subjectId?: string
   taskType?: TaskType
-  quizDate?: Date
 }
 
 // 課題を作成
@@ -43,7 +41,6 @@ export async function createTask(input: CreateTaskInput) {
         status: input.status || "not_started",
         priority: input.priority || 0,
         taskType: input.taskType || "assignment",
-        quizDate: input.quizDate,
       },
       include: {
         subject: true,
@@ -77,7 +74,6 @@ export async function updateTask(input: UpdateTaskInput) {
     if (input.priority !== undefined) updateData.priority = input.priority
     if (input.subjectId !== undefined) updateData.subjectId = input.subjectId
     if (input.taskType !== undefined) updateData.taskType = input.taskType
-    if (input.quizDate !== undefined) updateData.quizDate = input.quizDate
 
     updateData.updatedAt = new Date()
 
