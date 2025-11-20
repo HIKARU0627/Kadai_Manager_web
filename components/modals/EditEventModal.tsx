@@ -306,7 +306,11 @@ export function EditEventModal({
                 onChange={(e) =>
                   setFormData({ ...formData, location: e.target.value })
                 }
-                placeholder="例: 中央歯科クリニック"
+                placeholder={
+                  formData.eventType === "test"
+                    ? "例: A棟201教室"
+                    : "例: 中央歯科クリニック"
+                }
               />
             </div>
 
