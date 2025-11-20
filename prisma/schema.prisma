@@ -83,7 +83,7 @@ model Event {
   subjectId     String?
   title         String
   description   String?
-  eventType     String     @default("event") // event, test, exam
+  eventType     String     @default("event") // event, test
   startDatetime DateTime
   endDatetime   DateTime
   location      String?

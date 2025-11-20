@@ -109,9 +109,9 @@ export function AddEventModal({
         return
       }
 
-      // テスト/試験の場合は科目が必須
-      if ((formData.eventType === "test" || formData.eventType === "exam") && !formData.subjectId) {
-        setError("テスト/試験の場合は科目を選択してください")
+      // テストの場合は科目が必須
+      if (formData.eventType === "test" && !formData.subjectId) {
+        setError("テストの場合は科目を選択してください")
         setIsSubmitting(false)
         return
       }
@@ -178,11 +178,11 @@ export function AddEventModal({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {formData.eventType === "test" ? "テストを追加" : formData.eventType === "exam" ? "試験を追加" : "予定を追加"}
+            {formData.eventType === "test" ? "テストを追加" : "予定を追加"}
           </DialogTitle>
           <DialogDescription>
-            {formData.eventType === "test" || formData.eventType === "exam"
-              ? "テスト/試験の日程を登録します。すべての項目は後から編集できます。"
+            {formData.eventType === "test"
+              ? "テストの日程を登録します。すべての項目は後から編集できます。"
               : "個人的な予定を登録します。すべての項目は後から編集できます。"}
           </DialogDescription>
         </DialogHeader>
@@ -206,13 +206,12 @@ export function AddEventModal({
                 <SelectContent>
                   <SelectItem value="event">予定</SelectItem>
                   <SelectItem value="test">テスト</SelectItem>
-                  <SelectItem value="exam">試験</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* 科目選択 (テスト/試験の場合のみ表示) */}
-            {(formData.eventType === "test" || formData.eventType === "exam") && (
+            {/* 科目選択 (テストの場合のみ表示) */}
+            {formData.eventType === "test" && (
               <div className="grid gap-2">
                 <Label htmlFor="subject">
                   科目 <span className="text-red-500">*</span>
@@ -251,8 +250,6 @@ export function AddEventModal({
                 placeholder={
                   formData.eventType === "test"
                     ? "例: 中間テスト"
-                    : formData.eventType === "exam"
-                    ? "例: 期末試験"
                     : "例: 歯医者の予約"
                 }
                 required

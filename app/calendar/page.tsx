@@ -32,7 +32,7 @@ interface CalendarEvent {
   id: string
   title: string
   date: Date
-  type: "task" | "event" | "test" | "exam"
+  type: "task" | "event" | "test"
   color: string
   status?: string
   description?: string | null
@@ -93,25 +93,23 @@ export default function CalendarPage() {
         })
       }
 
-      // 予定を追加（イベント、テスト、試験）
+      // 予定を追加（イベント、テスト）
       if (eventsResult.success) {
         eventsResult.data.forEach((event: any) => {
           const eventType = event.eventType || "event"
           const subjectName = event.subjectId ? subjectMap.get(event.subjectId) : undefined
 
-          // テスト/試験の色を設定
+          // テストの色を設定
           let color = event.color || "#10B981"
           if (eventType === "test") {
             color = "#8B5CF6" // 紫
-          } else if (eventType === "exam") {
-            color = "#EF4444" // 赤
           }
 
           calendarEvents.push({
             id: event.id,
             title: event.title,
             date: new Date(event.startDatetime),
-            type: eventType as "task" | "event" | "test" | "exam",
+            type: eventType as "task" | "event" | "test",
             color: color,
             description: event.description,
             startDatetime: new Date(event.startDatetime),
@@ -202,25 +200,23 @@ export default function CalendarPage() {
         })
       }
 
-      // 予定を追加（イベント、テスト、試験）
+      // 予定を追加（イベント、テスト）
       if (eventsResult.success) {
         eventsResult.data.forEach((event: any) => {
           const eventType = event.eventType || "event"
           const subjectName = event.subjectId ? subjectMap.get(event.subjectId) : undefined
 
-          // テスト/試験の色を設定
+          // テストの色を設定
           let color = event.color || "#10B981"
           if (eventType === "test") {
             color = "#8B5CF6" // 紫
-          } else if (eventType === "exam") {
-            color = "#EF4444" // 赤
           }
 
           calendarEvents.push({
             id: event.id,
             title: event.title,
             date: new Date(event.startDatetime),
-            type: eventType as "task" | "event" | "test" | "exam",
+            type: eventType as "task" | "event" | "test",
             color: color,
             description: event.description,
             startDatetime: new Date(event.startDatetime),
@@ -275,17 +271,17 @@ export default function CalendarPage() {
     }
   }
 
-  // 編集ボタンのハンドラー（予定、テスト、試験）
+  // 編集ボタンのハンドラー（予定、テスト）
   const handleEdit = (event: CalendarEvent) => {
-    if ((event.type === "event" || event.type === "test" || event.type === "exam") && event.startDatetime && event.endDatetime) {
+    if ((event.type === "event" || event.type === "test") && event.startDatetime && event.endDatetime) {
       setSelectedEvent(event)
       setIsEditModalOpen(true)
     }
   }
 
-  // 削除ボタンのハンドラー（予定、テスト、試験）
+  // 削除ボタンのハンドラー（予定、テスト）
   const handleDeleteClick = (event: CalendarEvent) => {
-    if (event.type === "event" || event.type === "test" || event.type === "exam") {
+    if (event.type === "event" || event.type === "test") {
       setSelectedEvent(event)
       setIsDeleteDialogOpen(true)
     }
@@ -293,7 +289,7 @@ export default function CalendarPage() {
 
   // 削除確認のハンドラー
   const handleDeleteConfirm = async () => {
-    if (!selectedEvent || (selectedEvent.type !== "event" && selectedEvent.type !== "test" && selectedEvent.type !== "exam")) return
+    if (!selectedEvent || (selectedEvent.type !== "event" && selectedEvent.type !== "test")) return
 
     setIsDeleting(true)
     const result = await deleteEvent(selectedEvent.id)
@@ -463,7 +459,7 @@ export default function CalendarPage() {
                 <div className="space-y-2">{renderCalendar()}</div>
 
                 {/* 凡例 */}
-                <div className="mt-6 grid grid-cols-2 gap-2 text-sm">
+                <div className="mt-6 grid grid-cols-3 gap-2 text-sm">
                   <div className="flex items-center">
                     <div
                       className="w-4 h-4 rounded mr-2"
@@ -484,13 +480,6 @@ export default function CalendarPage() {
                       style={{ backgroundColor: "#8B5CF6" }}
                     ></div>
                     <span>テスト</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div
-                      className="w-4 h-4 rounded mr-2"
-                      style={{ backgroundColor: "#EF4444" }}
-                    ></div>
-                    <span>試験</span>
                   </div>
                 </div>
               </CardContent>
@@ -538,11 +527,9 @@ export default function CalendarPage() {
                               ? "課題"
                               : event.type === "test"
                               ? "テスト"
-                              : event.type === "exam"
-                              ? "試験"
                               : "予定"}
                           </Badge>
-                          {(event.type === "event" || event.type === "test" || event.type === "exam") && (
+                          {(event.type === "event" || event.type === "test") && (
                             <div className="flex space-x-1">
                               <Button
                                 variant="ghost"
@@ -603,12 +590,6 @@ export default function CalendarPage() {
                       {events.filter((e) => e.type === "test").length}件
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">試験</span>
-                    <Badge className="bg-red-100 text-red-600">
-                      {events.filter((e) => e.type === "exam").length}件
-                    </Badge>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -626,7 +607,7 @@ export default function CalendarPage() {
       />
 
       {/* 予定編集モーダル */}
-      {selectedEvent && (selectedEvent.type === "event" || selectedEvent.type === "test" || selectedEvent.type === "exam") && (
+      {selectedEvent && (selectedEvent.type === "event" || selectedEvent.type === "test") && (
         <EditEventModal
           open={isEditModalOpen}
           onOpenChange={handleEditModalClose}
@@ -634,7 +615,7 @@ export default function CalendarPage() {
             id: selectedEvent.id,
             title: selectedEvent.title,
             description: selectedEvent.description || null,
-            eventType: selectedEvent.type as "event" | "test" | "exam",
+            eventType: selectedEvent.type as "event" | "test",
             subjectId: selectedEvent.subjectId,
             startDatetime: selectedEvent.startDatetime,
             endDatetime: selectedEvent.endDatetime,

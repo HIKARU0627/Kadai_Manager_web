@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-export type EventType = "event" | "test" | "exam"
+export type EventType = "event" | "test"
 
 export interface CreateEventInput {
   userId: string
