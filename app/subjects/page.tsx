@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AddSubjectModal } from "@/components/modals/AddSubjectModal"
 import { EditSubjectModal } from "@/components/modals/EditSubjectModal"
@@ -28,11 +29,12 @@ interface Subject {
   id: string
   semesterId: string | null
   name: string
+  type: string
   teacher: string | null
   classroom: string | null
   color: string
-  dayOfWeek: number
-  period: number
+  dayOfWeek: number | null
+  period: number | null
 }
 
 export default function SubjectsPage() {
@@ -49,6 +51,8 @@ export default function SubjectsPage() {
   const [periods, setPeriods] = useState<Period[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [defaultDayOfWeek, setDefaultDayOfWeek] = useState<number | null>(null)
+  const [defaultPeriod, setDefaultPeriod] = useState<number | null>(null)
 
   // データの取得
   useEffect(() => {
@@ -107,6 +111,9 @@ export default function SubjectsPage() {
     setIsAddModalOpen(open)
     if (!open) {
       await fetchScheduleData()
+      // デフォルト値をクリア
+      setDefaultDayOfWeek(null)
+      setDefaultPeriod(null)
     }
   }
 
@@ -255,7 +262,11 @@ export default function SubjectsPage() {
                               <Button
                                 variant="ghost"
                                 className="w-full h-full text-gray-400 hover:text-gray-600"
-                                onClick={() => setIsAddModalOpen(true)}
+                                onClick={() => {
+                                  setDefaultDayOfWeek(dayOfWeek)
+                                  setDefaultPeriod(period.periodNumber)
+                                  setIsAddModalOpen(true)
+                                }}
                               >
                                 <Plus className="w-4 h-4" />
                               </Button>
@@ -289,7 +300,16 @@ export default function SubjectsPage() {
                   style={{ borderLeft: `4px solid ${subject.color}` }}
                 >
                   <CardHeader>
-                    <CardTitle className="text-lg">{subject.name}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{subject.name}</CardTitle>
+                      {subject.type !== "regular" && (
+                        <Badge variant="secondary" className="ml-2">
+                          {subject.type === "intensive" && "集中講義"}
+                          {subject.type === "on_demand" && "オンデマンド"}
+                          {subject.type === "other" && "その他"}
+                        </Badge>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm text-gray-600">
@@ -363,6 +383,8 @@ export default function SubjectsPage() {
         onOpenChange={handleAddModalClose}
         userId={session?.user?.id || ""}
         defaultSemesterId={selectedSemesterId}
+        defaultDayOfWeek={defaultDayOfWeek}
+        defaultPeriod={defaultPeriod}
       />
 
       {/* 科目編集モーダル */}

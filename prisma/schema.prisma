@@ -36,10 +36,11 @@ model Subject {
   userId      String
   semesterId  String?
   name        String
+  type        String   @default("regular") // regular, intensive, on_demand, other
   teacher     String?
   classroom   String?
-  dayOfWeek   Int      // 0=日曜, 1=月曜, ..., 6=土曜
-  period      Int      // 時限
+  dayOfWeek   Int?     // 0=日曜, 1=月曜, ..., 6=土曜 (regularの場合のみ)
+  period      Int?     // 時限 (regularの場合のみ)
   color       String   @default("#3B82F6")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

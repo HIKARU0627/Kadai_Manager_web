@@ -7,10 +7,11 @@ export interface CreateSubjectInput {
   userId: string
   semesterId?: string
   name: string
+  type?: string // regular, intensive, on_demand, other
   teacher?: string
   classroom?: string
-  dayOfWeek: number // 0=日曜, 1=月曜, ..., 6=土曜
-  period: number
+  dayOfWeek?: number // 0=日曜, 1=月曜, ..., 6=土曜
+  period?: number
   color?: string
 }
 
@@ -18,6 +19,7 @@ export interface UpdateSubjectInput {
   id: string
   semesterId?: string
   name?: string
+  type?: string
   teacher?: string
   classroom?: string
   dayOfWeek?: number
@@ -33,6 +35,7 @@ export async function createSubject(input: CreateSubjectInput) {
         userId: input.userId,
         semesterId: input.semesterId,
         name: input.name,
+        type: input.type || "regular",
         teacher: input.teacher,
         classroom: input.classroom,
         dayOfWeek: input.dayOfWeek,
@@ -58,6 +61,7 @@ export async function updateSubject(input: UpdateSubjectInput) {
 
     if (input.semesterId !== undefined) updateData.semesterId = input.semesterId
     if (input.name !== undefined) updateData.name = input.name
+    if (input.type !== undefined) updateData.type = input.type
     if (input.teacher !== undefined) updateData.teacher = input.teacher
     if (input.classroom !== undefined) updateData.classroom = input.classroom
     if (input.dayOfWeek !== undefined) updateData.dayOfWeek = input.dayOfWeek
