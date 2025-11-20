@@ -32,9 +32,11 @@ type Task = {
   id: string
   title: string
   description: string | null
+  subjectId: string | null
   dueDate: Date
   status: string
   priority: number
+  taskType: string
   subject: { id: string; name: string; color: string } | null
   files: any[]
 }

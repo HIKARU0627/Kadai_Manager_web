@@ -105,8 +105,8 @@ export function EditTaskModal({
       const result = await updateTask({
         id: task.id,
         title: formData.title,
-        description: formData.description || undefined,
-        subjectId: formData.subjectId === "none" ? undefined : formData.subjectId,
+        description: formData.description.trim() === "" ? null : formData.description,
+        subjectId: formData.subjectId === "none" ? null : formData.subjectId,
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
         status: formData.status as "not_started" | "in_progress" | "completed",

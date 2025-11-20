@@ -20,11 +20,11 @@ export interface CreateTaskInput {
 export interface UpdateTaskInput {
   id: string
   title?: string
-  description?: string
+  description?: string | null
   dueDate?: Date
   status?: TaskStatus
   priority?: number
-  subjectId?: string
+  subjectId?: string | null
   taskType?: TaskType
 }
 
@@ -72,7 +72,9 @@ export async function updateTask(input: UpdateTaskInput) {
       }
     }
     if (input.priority !== undefined) updateData.priority = input.priority
-    if (input.subjectId !== undefined) updateData.subjectId = input.subjectId
+    if (input.subjectId !== undefined) {
+      updateData.subjectId = input.subjectId
+    }
     if (input.taskType !== undefined) updateData.taskType = input.taskType
 
     updateData.updatedAt = new Date()
