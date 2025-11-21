@@ -127,13 +127,29 @@ export async function deleteEventType(id: string) {
 // イベントタイプを取得（一覧）
 export async function getEventTypes(userId: string) {
   try {
-    const eventTypes = await prisma.eventType.findMany({
+    let eventTypes = await prisma.eventType.findMany({
       where: { userId },
       orderBy: [
         { order: "asc" },
         { createdAt: "asc" },
       ],
     })
+
+    // イベントタイプが存在しない場合、デフォルトのイベントタイプを自動初期化
+    if (eventTypes.length === 0) {
+      console.log(`No event types found for user ${userId}, initializing defaults...`)
+      const initResult = await initializeDefaultEventTypes(userId)
+      if (initResult.success) {
+        // 再度取得
+        eventTypes = await prisma.eventType.findMany({
+          where: { userId },
+          orderBy: [
+            { order: "asc" },
+            { createdAt: "asc" },
+          ],
+        })
+      }
+    }
 
     return { success: true, data: eventTypes }
   } catch (error) {

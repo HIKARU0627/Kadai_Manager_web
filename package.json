@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:init": "tsx scripts/init-db.ts",
+    "db:migrate-event-types": "tsx scripts/migrate-event-types.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
