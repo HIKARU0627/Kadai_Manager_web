@@ -568,8 +568,7 @@ export default function CalendarPage() {
                           }}
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDateClick(day)
-                            setSelectedEvent(event)
+                            handleEdit(event)
                           }}
                         >
                           <div className="text-white font-semibold truncate text-[10px]">
