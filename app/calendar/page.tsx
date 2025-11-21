@@ -398,6 +398,163 @@ export default function CalendarPage() {
     setIsAddModalOpen(true)
   }
 
+  // 時間軸での表示（週別・3日別）
+  const renderTimeGridCalendar = () => {
+    const days = []
+    let day = startDate
+
+    while (day <= endDate) {
+      days.push(day)
+      day = addDays(day, 1)
+    }
+
+    const hours = Array.from({ length: 24 }, (_, i) => i)
+    const gridCols = viewMode === 'week' ? 'grid-cols-8' : 'grid-cols-4' // 時間列 + 日付列
+
+    return (
+      <div className="overflow-x-auto">
+        <div className={`grid ${gridCols} gap-0 min-w-full`}>
+          {/* ヘッダー行 */}
+          <div className="sticky top-0 bg-white border-b border-r p-2 text-center text-sm font-semibold text-gray-600 z-20">
+            時刻
+          </div>
+          {days.map((day, dayIndex) => {
+            const isTodayDate = isToday(day)
+            return (
+              <div
+                key={dayIndex}
+                className={`sticky top-0 bg-white border-b border-r p-2 text-center z-20 ${
+                  isTodayDate ? "bg-blue-50" : ""
+                }`}
+              >
+                <div className="text-xs text-gray-500">
+                  {format(day, "M/d (E)", { locale: ja })}
+                </div>
+                {isTodayDate && (
+                  <Badge className="bg-blue-100 text-blue-600 text-xs mt-1">
+                    今日
+                  </Badge>
+                )}
+              </div>
+            )
+          })}
+
+          {/* 終日イベント行 */}
+          <div className="bg-gray-50 border-r border-b p-2 text-xs text-gray-500 text-right">
+            終日
+          </div>
+          {days.map((day, dayIndex) => {
+            const isTodayDate = isToday(day)
+            const allDayEvents = getEventsForDate(day).filter((event) => {
+              // 課題または startDatetime がないイベント
+              return event.type === 'task' || !event.startDatetime
+            })
+
+            return (
+              <div
+                key={`allday-${dayIndex}`}
+                className={`border-r border-b p-1 min-h-12 cursor-pointer hover:bg-gray-50 ${
+                  isTodayDate ? "bg-blue-50/30" : "bg-white"
+                }`}
+                onClick={() => handleDateClick(day)}
+                onDoubleClick={() => handleDateDoubleClick(day)}
+              >
+                <div className="space-y-1">
+                  {allDayEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="text-xs p-1 rounded truncate"
+                      style={{
+                        backgroundColor: `${event.color}20`,
+                        borderLeft: `3px solid ${event.color}`,
+                      }}
+                    >
+                      {event.title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* 時間行 */}
+          {hours.map((hour) => (
+            <>
+              {/* 時刻ラベル */}
+              <div
+                key={`time-${hour}`}
+                className="border-r border-b p-2 text-xs text-gray-500 text-right bg-gray-50"
+              >
+                {hour}:00
+              </div>
+              {/* 各日の時間セル */}
+              {days.map((day, dayIndex) => {
+                const isTodayDate = isToday(day)
+                const dayEvents = getEventsForDate(day).filter((event) => {
+                  if (!event.startDatetime) return false
+                  const eventHour = event.startDatetime.getHours()
+                  return eventHour === hour
+                })
+
+                return (
+                  <div
+                    key={`${dayIndex}-${hour}`}
+                    className={`border-r border-b p-1 min-h-16 relative cursor-pointer hover:bg-gray-50 ${
+                      isTodayDate ? "bg-blue-50/30" : "bg-white"
+                    }`}
+                    onClick={() => handleDateClick(day)}
+                    onDoubleClick={() => handleDateDoubleClick(day)}
+                  >
+                    {dayEvents.map((event) => {
+                      const startHour = event.startDatetime!.getHours()
+                      const startMinute = event.startDatetime!.getMinutes()
+                      const endHour = event.endDatetime?.getHours() || startHour + 1
+                      const endMinute = event.endDatetime?.getMinutes() || 0
+
+                      const duration = (endHour - startHour) + (endMinute - startMinute) / 60
+                      const topOffset = (startMinute / 60) * 100
+
+                      return (
+                        <div
+                          key={event.id}
+                          className="absolute left-1 right-1 rounded text-xs p-1 overflow-hidden"
+                          style={{
+                            backgroundColor: `${event.color}`,
+                            top: `${topOffset}%`,
+                            height: duration > 0 ? `${Math.min(duration * 64, 200)}px` : '60px',
+                            zIndex: 10,
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDateClick(day)
+                            setSelectedEvent(event)
+                          }}
+                        >
+                          <div className="text-white font-semibold truncate">
+                            {event.title}
+                          </div>
+                          <div className="text-white text-xs opacity-90">
+                            {format(event.startDatetime!, "HH:mm")}
+                            {event.endDatetime && ` - ${format(event.endDatetime, "HH:mm")}`}
+                          </div>
+                          {event.subjectName && (
+                            <div className="text-white text-xs opacity-80 truncate">
+                              {event.subjectName}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   const renderCalendar = () => {
     const days = []
     let day = startDate
@@ -475,60 +632,8 @@ export default function CalendarPage() {
       ))
     }
 
-    // 週別・3日別表示の場合
-    const gridCols = viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-3'
-    return (
-      <div className={`grid ${gridCols} gap-2`}>
-        {days.map((day, dayIndex) => {
-          const dayEvents = getEventsForDate(day)
-          const isSelected = selectedDate && isSameDay(day, selectedDate)
-          const isTodayDate = isToday(day)
-
-          return (
-            <div
-              key={dayIndex}
-              onClick={() => handleDateClick(day)}
-              onDoubleClick={() => handleDateDoubleClick(day)}
-              className={`min-h-32 p-3 border rounded-lg cursor-pointer transition bg-white hover:bg-gray-50 ${
-                isSelected ? "ring-2 ring-blue-500" : ""
-              } ${isTodayDate ? "border-blue-500 border-2" : ""}`}
-            >
-              <div className="flex flex-col items-center mb-2">
-                <span className="text-xs text-gray-500">
-                  {format(day, "E", { locale: ja })}
-                </span>
-                <span
-                  className={`text-lg font-bold ${
-                    isTodayDate ? "text-blue-600" : "text-gray-800"
-                  }`}
-                >
-                  {format(day, "d")}
-                </span>
-                {isTodayDate && (
-                  <Badge className="bg-blue-100 text-blue-600 text-xs mt-1">
-                    今日
-                  </Badge>
-                )}
-              </div>
-              <div className="space-y-1">
-                {dayEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="text-xs p-1.5 rounded truncate"
-                    style={{
-                      backgroundColor: `${event.color}20`,
-                      borderLeft: `3px solid ${event.color}`,
-                    }}
-                  >
-                    {event.title}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
+    // 週別・3日別表示の場合は時間軸表示
+    return renderTimeGridCalendar()
   }
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
