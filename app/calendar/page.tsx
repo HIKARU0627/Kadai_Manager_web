@@ -19,6 +19,8 @@ import {
   addDays,
   addMonths,
   subMonths,
+  addWeeks,
+  subWeeks,
   isSameMonth,
   isSameDay,
   isToday,
@@ -28,6 +30,8 @@ import { getMonthlyEvents, deleteEvent } from "@/app/actions/events"
 import { getTasks } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
 import { getUserEventTypes, type EventTypeConfig } from "@/app/actions/eventTypes"
+
+type ViewMode = 'month' | 'week' | '3days'
 
 interface CalendarEvent {
   id: string
@@ -64,11 +68,49 @@ export default function CalendarPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [dateForNewEvent, setDateForNewEvent] = useState<Date | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('month')
 
+  // 表示範囲の計算
+  const getDateRange = () => {
+    switch (viewMode) {
+      case 'month': {
+        const monthStart = startOfMonth(currentMonth)
+        const monthEnd = endOfMonth(monthStart)
+        return {
+          start: startOfWeek(monthStart, { locale: ja }),
+          end: endOfWeek(monthEnd, { locale: ja }),
+          displayStart: monthStart,
+          displayEnd: monthEnd,
+        }
+      }
+      case 'week': {
+        const weekStart = startOfWeek(currentMonth, { locale: ja })
+        const weekEnd = endOfWeek(currentMonth, { locale: ja })
+        return {
+          start: weekStart,
+          end: weekEnd,
+          displayStart: weekStart,
+          displayEnd: weekEnd,
+        }
+      }
+      case '3days': {
+        const start = currentMonth
+        const end = addDays(start, 2)
+        return {
+          start,
+          end,
+          displayStart: start,
+          displayEnd: end,
+        }
+      }
+    }
+  }
+
+  const dateRange = getDateRange()
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
-  const startDate = startOfWeek(monthStart, { locale: ja })
-  const endDate = endOfWeek(monthEnd, { locale: ja })
+  const startDate = dateRange.start
+  const endDate = dateRange.end
 
   // データの取得
   useEffect(() => {
@@ -171,12 +213,32 @@ export default function CalendarPage() {
     fetchData()
   }, [session?.user?.id, currentMonth])
 
-  const handlePreviousMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1))
+  const handlePrevious = () => {
+    switch (viewMode) {
+      case 'month':
+        setCurrentMonth(subMonths(currentMonth, 1))
+        break
+      case 'week':
+        setCurrentMonth(subWeeks(currentMonth, 1))
+        break
+      case '3days':
+        setCurrentMonth(addDays(currentMonth, -3))
+        break
+    }
   }
 
-  const handleNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1))
+  const handleNext = () => {
+    switch (viewMode) {
+      case 'month':
+        setCurrentMonth(addMonths(currentMonth, 1))
+        break
+      case 'week':
+        setCurrentMonth(addWeeks(currentMonth, 1))
+        break
+      case '3days':
+        setCurrentMonth(addDays(currentMonth, 3))
+        break
+    }
   }
 
   const handleDateClick = (day: Date) => {
@@ -345,16 +407,80 @@ export default function CalendarPage() {
       day = addDays(day, 1)
     }
 
-    const weeks = []
-    for (let i = 0; i < days.length; i += 7) {
-      weeks.push(days.slice(i, i + 7))
+    // 月別表示の場合は週ごとに分割
+    if (viewMode === 'month') {
+      const weeks = []
+      for (let i = 0; i < days.length; i += 7) {
+        weeks.push(days.slice(i, i + 7))
+      }
+
+      return weeks.map((week, weekIndex) => (
+        <div key={weekIndex} className="grid grid-cols-7 gap-2">
+          {week.map((day, dayIndex) => {
+            const dayEvents = getEventsForDate(day)
+            const isCurrentMonth = isSameMonth(day, monthStart)
+            const isSelected = selectedDate && isSameDay(day, selectedDate)
+            const isTodayDate = isToday(day)
+
+            return (
+              <div
+                key={dayIndex}
+                onClick={() => handleDateClick(day)}
+                onDoubleClick={() => handleDateDoubleClick(day)}
+                className={`min-h-24 p-2 border rounded-lg cursor-pointer transition ${
+                  isCurrentMonth
+                    ? "bg-white hover:bg-gray-50"
+                    : "bg-gray-50 text-gray-400"
+                } ${isSelected ? "ring-2 ring-blue-500" : ""} ${
+                  isTodayDate ? "border-blue-500 border-2" : ""
+                }`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span
+                    className={`text-sm font-semibold ${
+                      isTodayDate ? "text-blue-600" : ""
+                    }`}
+                  >
+                    {format(day, "d")}
+                  </span>
+                  {isTodayDate && (
+                    <Badge className="bg-blue-100 text-blue-600 text-xs">
+                      今日
+                    </Badge>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {dayEvents.slice(0, 2).map((event) => (
+                    <div
+                      key={event.id}
+                      className="text-xs p-1 rounded truncate"
+                      style={{
+                        backgroundColor: `${event.color}20`,
+                        borderLeft: `3px solid ${event.color}`,
+                      }}
+                    >
+                      {event.title}
+                    </div>
+                  ))}
+                  {dayEvents.length > 2 && (
+                    <div className="text-xs text-gray-500">
+                      +{dayEvents.length - 2}件
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ))
     }
 
-    return weeks.map((week, weekIndex) => (
-      <div key={weekIndex} className="grid grid-cols-7 gap-2">
-        {week.map((day, dayIndex) => {
+    // 週別・3日別表示の場合
+    const gridCols = viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-3'
+    return (
+      <div className={`grid ${gridCols} gap-2`}>
+        {days.map((day, dayIndex) => {
           const dayEvents = getEventsForDate(day)
-          const isCurrentMonth = isSameMonth(day, monthStart)
           const isSelected = selectedDate && isSameDay(day, selectedDate)
           const isTodayDate = isToday(day)
 
@@ -363,33 +489,32 @@ export default function CalendarPage() {
               key={dayIndex}
               onClick={() => handleDateClick(day)}
               onDoubleClick={() => handleDateDoubleClick(day)}
-              className={`min-h-24 p-2 border rounded-lg cursor-pointer transition ${
-                isCurrentMonth
-                  ? "bg-white hover:bg-gray-50"
-                  : "bg-gray-50 text-gray-400"
-              } ${isSelected ? "ring-2 ring-blue-500" : ""} ${
-                isTodayDate ? "border-blue-500 border-2" : ""
-              }`}
+              className={`min-h-32 p-3 border rounded-lg cursor-pointer transition bg-white hover:bg-gray-50 ${
+                isSelected ? "ring-2 ring-blue-500" : ""
+              } ${isTodayDate ? "border-blue-500 border-2" : ""}`}
             >
-              <div className="flex justify-between items-center mb-1">
+              <div className="flex flex-col items-center mb-2">
+                <span className="text-xs text-gray-500">
+                  {format(day, "E", { locale: ja })}
+                </span>
                 <span
-                  className={`text-sm font-semibold ${
-                    isTodayDate ? "text-blue-600" : ""
+                  className={`text-lg font-bold ${
+                    isTodayDate ? "text-blue-600" : "text-gray-800"
                   }`}
                 >
                   {format(day, "d")}
                 </span>
                 {isTodayDate && (
-                  <Badge className="bg-blue-100 text-blue-600 text-xs">
+                  <Badge className="bg-blue-100 text-blue-600 text-xs mt-1">
                     今日
                   </Badge>
                 )}
               </div>
               <div className="space-y-1">
-                {dayEvents.slice(0, 2).map((event) => (
+                {dayEvents.map((event) => (
                   <div
                     key={event.id}
-                    className="text-xs p-1 rounded truncate"
+                    className="text-xs p-1.5 rounded truncate"
                     style={{
                       backgroundColor: `${event.color}20`,
                       borderLeft: `3px solid ${event.color}`,
@@ -398,17 +523,12 @@ export default function CalendarPage() {
                     {event.title}
                   </div>
                 ))}
-                {dayEvents.length > 2 && (
-                  <div className="text-xs text-gray-500">
-                    +{dayEvents.length - 2}件
-                  </div>
-                )}
               </div>
             </div>
           )
         })}
       </div>
-    ))
+    )
   }
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : []
@@ -445,23 +565,50 @@ export default function CalendarPage() {
           <div className="lg:col-span-3">
             <Card>
               <CardContent className="p-6">
-                {/* 月選択 */}
+                {/* 表示範囲と切り替えボタン */}
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-800">
-                    {format(currentMonth, "yyyy年MM月", { locale: ja })}
-                  </h3>
+                  <div className="flex items-center space-x-4">
+                    <h3 className="text-2xl font-bold text-gray-800">
+                      {viewMode === 'month' && format(currentMonth, "yyyy年MM月", { locale: ja })}
+                      {viewMode === 'week' && `${format(startDate, "yyyy年MM月dd日", { locale: ja })} - ${format(endDate, "MM月dd日", { locale: ja })}`}
+                      {viewMode === '3days' && `${format(startDate, "yyyy年MM月dd日", { locale: ja })} - ${format(endDate, "MM月dd日", { locale: ja })}`}
+                    </h3>
+                    <div className="flex space-x-1">
+                      <Button
+                        variant={viewMode === 'month' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setViewMode('month')}
+                      >
+                        月
+                      </Button>
+                      <Button
+                        variant={viewMode === 'week' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setViewMode('week')}
+                      >
+                        週
+                      </Button>
+                      <Button
+                        variant={viewMode === '3days' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setViewMode('3days')}
+                      >
+                        3日
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={handlePreviousMonth}
+                      onClick={handlePrevious}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={handleNextMonth}
+                      onClick={handleNext}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -469,16 +616,18 @@ export default function CalendarPage() {
                 </div>
 
                 {/* 曜日ヘッダー */}
-                <div className="grid grid-cols-7 gap-2 mb-2">
-                  {["日", "月", "火", "水", "木", "金", "土"].map((day, index) => (
-                    <div
-                      key={index}
-                      className="text-center text-sm font-semibold text-gray-600 p-2"
-                    >
-                      {day}
-                    </div>
-                  ))}
-                </div>
+                {viewMode === 'month' && (
+                  <div className="grid grid-cols-7 gap-2 mb-2">
+                    {["日", "月", "火", "水", "木", "金", "土"].map((day, index) => (
+                      <div
+                        key={index}
+                        className="text-center text-sm font-semibold text-gray-600 p-2"
+                      >
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* カレンダーグリッド */}
                 <div className="space-y-2">{renderCalendar()}</div>
