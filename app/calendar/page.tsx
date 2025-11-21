@@ -300,17 +300,17 @@ export default function CalendarPage() {
     }
   }
 
-  // 編集ボタンのハンドラー（予定、テスト）
+  // 編集ボタンのハンドラー（イベント全般）
   const handleEdit = (event: CalendarEvent) => {
-    if ((event.type === "event" || event.type === "test") && event.startDatetime && event.endDatetime) {
+    if (event.type !== "task" && event.startDatetime && event.endDatetime) {
       setSelectedEvent(event)
       setIsEditModalOpen(true)
     }
   }
 
-  // 削除ボタンのハンドラー（予定、テスト）
+  // 削除ボタンのハンドラー（イベント全般）
   const handleDeleteClick = (event: CalendarEvent) => {
-    if (event.type === "event" || event.type === "test") {
+    if (event.type !== "task") {
       setSelectedEvent(event)
       setIsDeleteDialogOpen(true)
     }
@@ -318,7 +318,7 @@ export default function CalendarPage() {
 
   // 削除確認のハンドラー
   const handleDeleteConfirm = async () => {
-    if (!selectedEvent || (selectedEvent.type !== "event" && selectedEvent.type !== "test")) return
+    if (!selectedEvent || selectedEvent.type === "task") return
 
     setIsDeleting(true)
     const result = await deleteEvent(selectedEvent.id)
@@ -488,7 +488,8 @@ export default function CalendarPage() {
                 <div className="space-y-2">{renderCalendar()}</div>
 
                 {/* 凡例 */}
-                <div className="mt-6 grid grid-cols-3 gap-2 text-sm">
+                <div className="mt-6 flex flex-wrap gap-4 text-sm">
+                  {/* 課題（固定） */}
                   <div className="flex items-center">
                     <div
                       className="w-4 h-4 rounded mr-2"
@@ -496,20 +497,17 @@ export default function CalendarPage() {
                     ></div>
                     <span>課題</span>
                   </div>
-                  <div className="flex items-center">
-                    <div
-                      className="w-4 h-4 rounded mr-2"
-                      style={{ backgroundColor: "#10B981" }}
-                    ></div>
-                    <span>予定</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div
-                      className="w-4 h-4 rounded mr-2"
-                      style={{ backgroundColor: "#8B5CF6" }}
-                    ></div>
-                    <span>テスト</span>
-                  </div>
+
+                  {/* ユーザーのイベントタイプ（動的） */}
+                  {eventTypes.map((eventType) => (
+                    <div key={eventType.id} className="flex items-center">
+                      <div
+                        className="w-4 h-4 rounded mr-2"
+                        style={{ backgroundColor: eventType.color }}
+                      ></div>
+                      <span>{eventType.name}</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -554,11 +552,9 @@ export default function CalendarPage() {
                           >
                             {event.type === "task"
                               ? "課題"
-                              : event.type === "test"
-                              ? "テスト"
-                              : "予定"}
+                              : eventTypes.find(t => t.value === event.type)?.name || "予定"}
                           </Badge>
-                          {(event.type === "event" || event.type === "test") && (
+                          {event.type !== "task" && (
                             <div className="flex space-x-1">
                               <Button
                                 variant="ghost"
@@ -601,24 +597,34 @@ export default function CalendarPage() {
                   今月の統計
                 </h3>
                 <div className="space-y-3">
+                  {/* 課題（固定） */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">課題</span>
                     <Badge className="bg-orange-100 text-orange-600">
                       {events.filter((e) => e.type === "task").length}件
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">予定</span>
-                    <Badge className="bg-green-100 text-green-600">
-                      {events.filter((e) => e.type === "event").length}件
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">テスト</span>
-                    <Badge className="bg-purple-100 text-purple-600">
-                      {events.filter((e) => e.type === "test").length}件
-                    </Badge>
-                  </div>
+
+                  {/* ユーザーのイベントタイプ（動的） */}
+                  {eventTypes.map((eventType) => {
+                    const count = events.filter((e) => e.type === eventType.value).length
+                    // カウントが0の場合は表示しない
+                    if (count === 0) return null
+
+                    return (
+                      <div key={eventType.id} className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">{eventType.name}</span>
+                        <Badge
+                          style={{
+                            backgroundColor: `${eventType.color}20`,
+                            color: eventType.color
+                          }}
+                        >
+                          {count}件
+                        </Badge>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -637,7 +643,7 @@ export default function CalendarPage() {
       />
 
       {/* 予定編集モーダル */}
-      {selectedEvent && (selectedEvent.type === "event" || selectedEvent.type === "test") && (
+      {selectedEvent && selectedEvent.type !== "task" && (
         <EditEventModal
           open={isEditModalOpen}
           onOpenChange={handleEditModalClose}
