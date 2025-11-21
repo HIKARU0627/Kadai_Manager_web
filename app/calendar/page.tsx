@@ -626,6 +626,7 @@ export default function CalendarPage() {
         userId={session?.user?.id || ""}
         initialDate={dateForNewEvent || undefined}
         subjects={subjects}
+        defaultEventType={eventTypes.find((et) => et.name === "予定")?.id}
       />
 
       {/* 予定編集モーダル */}

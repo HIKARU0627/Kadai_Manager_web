@@ -51,7 +51,7 @@ export function AddEventModal({
   initialDate,
   subjects = [],
   defaultSubjectId = null,
-  defaultEventType = "event",
+  defaultEventType,
 }: AddEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +59,7 @@ export function AddEventModal({
   const [loadingEventTypes, setLoadingEventTypes] = useState(true)
 
   const [formData, setFormData] = useState({
-    eventType: defaultEventType,
+    eventType: defaultEventType || "",
     subjectId: defaultSubjectId || "",
     title: "",
     description: "",
@@ -111,7 +111,7 @@ export function AddEventModal({
       }
 
       setFormData({
-        eventType: defaultEventType,
+        eventType: defaultEventType || (eventTypes.length > 0 ? eventTypes[0].id : ""),
         subjectId: defaultSubjectId || "",
         title: "",
         description: "",
@@ -121,7 +121,7 @@ export function AddEventModal({
         color: "#10B981",
       })
     }
-  }, [initialDate, open, defaultEventType, defaultSubjectId])
+  }, [initialDate, open, defaultEventType, defaultSubjectId, eventTypes])
 
   // 現在選択されているイベントタイプの設定を取得
   const selectedEventType = eventTypes.find((et) => et.id === formData.eventType)
@@ -182,7 +182,7 @@ export function AddEventModal({
       if (result.success) {
         // Reset form
         setFormData({
-          eventType: "event",
+          eventType: defaultEventType || (eventTypes.length > 0 ? eventTypes[0].id : ""),
           subjectId: "",
           title: "",
           description: "",
