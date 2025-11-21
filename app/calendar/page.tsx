@@ -210,6 +210,12 @@ export default function CalendarPage() {
 
       const calendarEvents: CalendarEvent[] = []
 
+      // イベントタイプマップを作成
+      const eventTypeMap = new Map<string, EventTypeConfig>()
+      eventTypes.forEach((et) => {
+        eventTypeMap.set(et.id, et)
+      })
+
       // 科目マップを作成
       const subjectMap = new Map<string, string>()
       if (subjectsResult.success) {
@@ -290,17 +296,17 @@ export default function CalendarPage() {
     }
   }
 
-  // 編集ボタンのハンドラー（予定、テスト）
+  // 編集ボタンのハンドラー（予定、テスト、カスタムイベントタイプ）
   const handleEdit = (event: CalendarEvent) => {
-    if ((event.type === "event" || event.type === "test") && event.startDatetime && event.endDatetime) {
+    if (event.type !== "task" && event.startDatetime && event.endDatetime) {
       setSelectedEvent(event)
       setIsEditModalOpen(true)
     }
   }
 
-  // 削除ボタンのハンドラー（予定、テスト）
+  // 削除ボタンのハンドラー（予定、テスト、カスタムイベントタイプ）
   const handleDeleteClick = (event: CalendarEvent) => {
-    if (event.type === "event" || event.type === "test") {
+    if (event.type !== "task") {
       setSelectedEvent(event)
       setIsDeleteDialogOpen(true)
     }
@@ -308,7 +314,7 @@ export default function CalendarPage() {
 
   // 削除確認のハンドラー
   const handleDeleteConfirm = async () => {
-    if (!selectedEvent || (selectedEvent.type !== "event" && selectedEvent.type !== "test")) return
+    if (!selectedEvent || selectedEvent.type === "task") return
 
     setIsDeleting(true)
     const result = await deleteEvent(selectedEvent.id)
