@@ -411,6 +411,49 @@ export default function CalendarPage() {
     const hours = Array.from({ length: 24 }, (_, i) => i)
     const gridCols = viewMode === 'week' ? 'grid-cols-8' : 'grid-cols-4' // 時間列 + 日付列
 
+    // 各日のイベントを時間範囲で整理
+    const getDayTimedEvents = (date: Date) => {
+      return getEventsForDate(date).filter((event) => event.startDatetime)
+    }
+
+    // イベントが特定の時間帯に存在するかチェック
+    const isEventInHour = (event: CalendarEvent, hour: number) => {
+      if (!event.startDatetime) return false
+      const startHour = event.startDatetime.getHours()
+      const endHour = event.endDatetime?.getHours() || startHour + 1
+      const endMinute = event.endDatetime?.getMinutes() || 0
+
+      // イベントの終了が hour:00 ちょうどの場合は含めない
+      if (endHour === hour && endMinute === 0) return false
+
+      return startHour <= hour && hour < endHour || (hour === endHour && endMinute > 0)
+    }
+
+    // 各時間帯での重なりを検出し、イベントの配置を計算
+    const getEventLayout = (events: CalendarEvent[], hour: number) => {
+      const eventsInHour = events.filter(event => isEventInHour(event, hour))
+
+      // この時間帯に開始するイベントのみを返す
+      const eventsStartingInHour = eventsInHour.filter(event => {
+        return event.startDatetime!.getHours() === hour
+      })
+
+      // 重なりを考慮した配置情報を計算
+      const layouts = eventsStartingInHour.map((event, index) => {
+        // 同じ時間に他のイベントがどれだけあるか
+        const overlappingCount = eventsInHour.length
+        const position = eventsInHour.findIndex(e => e.id === event.id)
+
+        return {
+          event,
+          left: position * (100 / overlappingCount),
+          width: 100 / overlappingCount,
+        }
+      })
+
+      return layouts
+    }
+
     return (
       <div className="overflow-x-auto">
         <div className={`grid ${gridCols} gap-0 min-w-full`}>
@@ -490,11 +533,8 @@ export default function CalendarPage() {
               {/* 各日の時間セル */}
               {days.map((day, dayIndex) => {
                 const isTodayDate = isToday(day)
-                const dayEvents = getEventsForDate(day).filter((event) => {
-                  if (!event.startDatetime) return false
-                  const eventHour = event.startDatetime.getHours()
-                  return eventHour === hour
-                })
+                const dayTimedEvents = getDayTimedEvents(day)
+                const eventLayouts = getEventLayout(dayTimedEvents, hour)
 
                 return (
                   <div
@@ -505,7 +545,7 @@ export default function CalendarPage() {
                     onClick={() => handleDateClick(day)}
                     onDoubleClick={() => handleDateDoubleClick(day)}
                   >
-                    {dayEvents.map((event) => {
+                    {eventLayouts.map(({ event, left, width }) => {
                       const startHour = event.startDatetime!.getHours()
                       const startMinute = event.startDatetime!.getMinutes()
                       const endHour = event.endDatetime?.getHours() || startHour + 1
@@ -517,11 +557,13 @@ export default function CalendarPage() {
                       return (
                         <div
                           key={event.id}
-                          className="absolute left-1 right-1 rounded text-xs p-1 overflow-hidden"
+                          className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition"
                           style={{
                             backgroundColor: `${event.color}`,
                             top: `${topOffset}%`,
-                            height: duration > 0 ? `${Math.min(duration * 64, 200)}px` : '60px',
+                            left: `${left}%`,
+                            width: `${width - 1}%`, // 1%のマージンを追加
+                            height: duration > 0 ? `${Math.min(duration * 64, 400)}px` : '60px',
                             zIndex: 10,
                           }}
                           onClick={(e) => {
@@ -530,15 +572,15 @@ export default function CalendarPage() {
                             setSelectedEvent(event)
                           }}
                         >
-                          <div className="text-white font-semibold truncate">
+                          <div className="text-white font-semibold truncate text-[10px]">
                             {event.title}
                           </div>
-                          <div className="text-white text-xs opacity-90">
+                          <div className="text-white text-[10px] opacity-90">
                             {format(event.startDatetime!, "HH:mm")}
                             {event.endDatetime && ` - ${format(event.endDatetime, "HH:mm")}`}
                           </div>
-                          {event.subjectName && (
-                            <div className="text-white text-xs opacity-80 truncate">
+                          {event.subjectName && duration > 0.5 && (
+                            <div className="text-white text-[10px] opacity-80 truncate">
                               {event.subjectName}
                             </div>
                           )}
