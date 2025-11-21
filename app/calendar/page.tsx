@@ -33,7 +33,7 @@ interface CalendarEvent {
   id: string
   title: string
   date: Date
-  type: "task" | "event" | "test"
+  type: string  // "task" またはイベントタイプのvalue
   color: string
   status?: string
   description?: string | null
@@ -103,23 +103,28 @@ export default function CalendarPage() {
         })
       }
 
+      // イベントタイプマップを作成（valueからcolorを引けるように）
+      const eventTypeColorMap = new Map<string, string>()
+      if (eventTypesResult.success) {
+        eventTypesResult.data.forEach((t: any) => {
+          eventTypeColorMap.set(t.value, t.color)
+        })
+      }
+
       // 予定を追加（イベント、テスト）
       if (eventsResult.success) {
         eventsResult.data.forEach((event: any) => {
           const eventType = event.eventType || "event"
           const subjectName = event.subjectId ? subjectMap.get(event.subjectId) : undefined
 
-          // テストの色を設定
-          let color = event.color || "#10B981"
-          if (eventType === "test") {
-            color = "#8B5CF6" // 紫
-          }
+          // イベントタイプの色を取得（なければイベント自体の色、それもなければデフォルト）
+          const color = eventTypeColorMap.get(eventType) || event.color || "#10B981"
 
           calendarEvents.push({
             id: event.id,
             title: event.title,
             date: new Date(event.startDatetime),
-            type: eventType as "task" | "event" | "test",
+            type: eventType,
             color: color,
             description: event.description,
             startDatetime: new Date(event.startDatetime),
@@ -220,23 +225,28 @@ export default function CalendarPage() {
         })
       }
 
+      // イベントタイプマップを作成（valueからcolorを引けるように）
+      const eventTypeColorMap = new Map<string, string>()
+      if (eventTypesResult.success) {
+        eventTypesResult.data.forEach((t: any) => {
+          eventTypeColorMap.set(t.value, t.color)
+        })
+      }
+
       // 予定を追加（イベント、テスト）
       if (eventsResult.success) {
         eventsResult.data.forEach((event: any) => {
           const eventType = event.eventType || "event"
           const subjectName = event.subjectId ? subjectMap.get(event.subjectId) : undefined
 
-          // テストの色を設定
-          let color = event.color || "#10B981"
-          if (eventType === "test") {
-            color = "#8B5CF6" // 紫
-          }
+          // イベントタイプの色を取得（なければイベント自体の色、それもなければデフォルト）
+          const color = eventTypeColorMap.get(eventType) || event.color || "#10B981"
 
           calendarEvents.push({
             id: event.id,
             title: event.title,
             date: new Date(event.startDatetime),
-            type: eventType as "task" | "event" | "test",
+            type: eventType,
             color: color,
             description: event.description,
             startDatetime: new Date(event.startDatetime),
