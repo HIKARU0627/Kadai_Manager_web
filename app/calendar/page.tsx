@@ -587,7 +587,7 @@ export default function CalendarPage() {
                   {/* 課題の統計 */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">課題</span>
-                    <Badge className="bg-orange-100 text-orange-600">
+                    <Badge className="bg-orange-100 text-orange-600 pointer-events-none">
                       {events.filter((e) => e.type === "task").length}件
                     </Badge>
                   </div>
@@ -596,6 +596,7 @@ export default function CalendarPage() {
                     <div key={eventType.id} className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">{eventType.name}</span>
                       <Badge
+                        className="pointer-events-none"
                         style={{
                           backgroundColor: `${eventType.color}20`,
                           color: eventType.color,
