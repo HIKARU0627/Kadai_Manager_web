@@ -629,7 +629,7 @@ export default function CalendarPage() {
       />
 
       {/* 予定編集モーダル */}
-      {selectedEvent && (selectedEvent.type === "event" || selectedEvent.type === "test") && (
+      {selectedEvent && selectedEvent.type !== "task" && (
         <EditEventModal
           open={isEditModalOpen}
           onOpenChange={handleEditModalClose}
@@ -637,7 +637,7 @@ export default function CalendarPage() {
             id: selectedEvent.id,
             title: selectedEvent.title,
             description: selectedEvent.description || null,
-            eventType: selectedEvent.type as "event" | "test",
+            eventType: selectedEvent.type,
             subjectId: selectedEvent.subjectId,
             startDatetime: selectedEvent.startDatetime,
             endDatetime: selectedEvent.endDatetime,
