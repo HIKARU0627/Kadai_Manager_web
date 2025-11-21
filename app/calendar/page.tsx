@@ -27,12 +27,13 @@ import { ja } from "date-fns/locale"
 import { getMonthlyEvents, deleteEvent } from "@/app/actions/events"
 import { getTasks } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
+import { getUserEventTypes, type EventTypeConfig } from "@/app/actions/eventTypes"
 
 interface CalendarEvent {
   id: string
   title: string
   date: Date
-  type: "task" | "event" | "test"
+  type: string
   color: string
   status?: string
   description?: string | null
@@ -59,6 +60,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [eventTypes, setEventTypes] = useState<EventTypeConfig[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [dateForNewEvent, setDateForNewEvent] = useState<Date | null>(null)
@@ -77,13 +79,21 @@ export default function CalendarPage() {
       const year = currentMonth.getFullYear()
       const month = currentMonth.getMonth()
 
-      const [eventsResult, tasksResult, subjectsResult] = await Promise.all([
+      const [eventsResult, tasksResult, subjectsResult, eventTypesResult] = await Promise.all([
         getMonthlyEvents(session.user.id, year, month),
         getTasks(session.user.id, {}),
         getSubjects(session.user.id),
+        getUserEventTypes(),
       ])
 
       const calendarEvents: CalendarEvent[] = []
+
+      // イベントタイプマップを作成
+      const eventTypeMap = new Map<string, EventTypeConfig>()
+      eventTypesResult.forEach((et: EventTypeConfig) => {
+        eventTypeMap.set(et.id, et)
+      })
+      setEventTypes(eventTypesResult)
 
       // 科目マップを作成 (IDから名前を引けるように)
       const subjectMap = new Map<string, string>()
@@ -99,17 +109,18 @@ export default function CalendarPage() {
           const eventType = event.eventType || "event"
           const subjectName = event.subjectId ? subjectMap.get(event.subjectId) : undefined
 
-          // テストの色を設定
+          // イベントタイプ設定から色を取得、なければデフォルト色を使用
+          const eventTypeConfig = eventTypeMap.get(eventType)
           let color = event.color || "#10B981"
-          if (eventType === "test") {
-            color = "#8B5CF6" // 紫
+          if (eventTypeConfig) {
+            color = eventTypeConfig.color
           }
 
           calendarEvents.push({
             id: event.id,
             title: event.title,
             date: new Date(event.startDatetime),
-            type: eventType as "task" | "event" | "test",
+            type: eventType,
             color: color,
             description: event.description,
             startDatetime: new Date(event.startDatetime),
@@ -176,6 +187,13 @@ export default function CalendarPage() {
     return events.filter((event) => isSameDay(event.date, date))
   }
 
+  // イベントタイプの表示名を取得
+  const getEventTypeName = (type: string) => {
+    if (type === "task") return "課題"
+    const eventType = eventTypes.find((et) => et.id === type)
+    return eventType ? eventType.name : "予定"
+  }
+
   // モーダル閉じた時にデータを再取得
   const handleModalClose = async (open: boolean) => {
     setIsAddModalOpen(open)
@@ -206,17 +224,18 @@ export default function CalendarPage() {
           const eventType = event.eventType || "event"
           const subjectName = event.subjectId ? subjectMap.get(event.subjectId) : undefined
 
-          // テストの色を設定
+          // イベントタイプ設定から色を取得、なければデフォルト色を使用
+          const eventTypeConfig = eventTypeMap.get(eventType)
           let color = event.color || "#10B981"
-          if (eventType === "test") {
-            color = "#8B5CF6" // 紫
+          if (eventTypeConfig) {
+            color = eventTypeConfig.color
           }
 
           calendarEvents.push({
             id: event.id,
             title: event.title,
             date: new Date(event.startDatetime),
-            type: eventType as "task" | "event" | "test",
+            type: eventType,
             color: color,
             description: event.description,
             startDatetime: new Date(event.startDatetime),
@@ -460,6 +479,7 @@ export default function CalendarPage() {
 
                 {/* 凡例 */}
                 <div className="mt-6 grid grid-cols-3 gap-2 text-sm">
+                  {/* 課題は常に表示 */}
                   <div className="flex items-center">
                     <div
                       className="w-4 h-4 rounded mr-2"
@@ -467,20 +487,16 @@ export default function CalendarPage() {
                     ></div>
                     <span>課題</span>
                   </div>
-                  <div className="flex items-center">
-                    <div
-                      className="w-4 h-4 rounded mr-2"
-                      style={{ backgroundColor: "#10B981" }}
-                    ></div>
-                    <span>予定</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div
-                      className="w-4 h-4 rounded mr-2"
-                      style={{ backgroundColor: "#8B5CF6" }}
-                    ></div>
-                    <span>テスト</span>
-                  </div>
+                  {/* カスタムイベントタイプを表示 */}
+                  {eventTypes.map((eventType) => (
+                    <div key={eventType.id} className="flex items-center">
+                      <div
+                        className="w-4 h-4 rounded mr-2"
+                        style={{ backgroundColor: eventType.color }}
+                      ></div>
+                      <span>{eventType.name}</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -523,13 +539,9 @@ export default function CalendarPage() {
                               color: event.color,
                             }}
                           >
-                            {event.type === "task"
-                              ? "課題"
-                              : event.type === "test"
-                              ? "テスト"
-                              : "予定"}
+                            {getEventTypeName(event.type)}
                           </Badge>
-                          {(event.type === "event" || event.type === "test") && (
+                          {event.type !== "task" && (
                             <div className="flex space-x-1">
                               <Button
                                 variant="ghost"
@@ -572,24 +584,27 @@ export default function CalendarPage() {
                   今月の統計
                 </h3>
                 <div className="space-y-3">
+                  {/* 課題の統計 */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">課題</span>
                     <Badge className="bg-orange-100 text-orange-600">
                       {events.filter((e) => e.type === "task").length}件
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">予定</span>
-                    <Badge className="bg-green-100 text-green-600">
-                      {events.filter((e) => e.type === "event").length}件
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">テスト</span>
-                    <Badge className="bg-purple-100 text-purple-600">
-                      {events.filter((e) => e.type === "test").length}件
-                    </Badge>
-                  </div>
+                  {/* カスタムイベントタイプの統計 */}
+                  {eventTypes.map((eventType) => (
+                    <div key={eventType.id} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">{eventType.name}</span>
+                      <Badge
+                        style={{
+                          backgroundColor: `${eventType.color}20`,
+                          color: eventType.color,
+                        }}
+                      >
+                        {events.filter((e) => e.type === eventType.id).length}件
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
