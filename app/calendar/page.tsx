@@ -70,6 +70,12 @@ export default function CalendarPage() {
   const [dateForNewEvent, setDateForNewEvent] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(null)
+  const [resizingEvent, setResizingEvent] = useState<{
+    event: CalendarEvent
+    type: 'start' | 'end'
+    originalStart: Date
+    originalEnd: Date
+  } | null>(null)
 
   // 表示範囲の計算
   const getDateRange = () => {
@@ -112,6 +118,22 @@ export default function CalendarPage() {
   const monthEnd = endOfMonth(monthStart)
   const startDate = dateRange.start
   const endDate = dateRange.end
+
+  // リサイズ中のグローバルマウスアップハンドラー（リサイズ中断時用）
+  useEffect(() => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (resizingEvent) {
+        // イベント要素外でマウスアップした場合はキャンセル
+        setResizingEvent(null)
+      }
+    }
+
+    if (resizingEvent) {
+      // 少し遅延させてセルのonMouseUpより後に実行されるようにする
+      document.addEventListener('mouseup', handleGlobalMouseUp, { capture: false })
+      return () => document.removeEventListener('mouseup', handleGlobalMouseUp, { capture: false })
+    }
+  }, [resizingEvent])
 
   // データの取得
   useEffect(() => {
@@ -401,6 +423,11 @@ export default function CalendarPage() {
 
   // ドラッグ開始ハンドラー
   const handleDragStart = (e: React.DragEvent, event: CalendarEvent) => {
+    // リサイズ中はドラッグ不可
+    if (resizingEvent) {
+      e.preventDefault()
+      return
+    }
     // 課題はドラッグ不可
     if (event.type === 'task') {
       e.preventDefault()
@@ -408,6 +435,70 @@ export default function CalendarPage() {
     }
     setDraggingEvent(event)
     e.dataTransfer.effectAllowed = 'move'
+  }
+
+  // リサイズ開始ハンドラー
+  const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent, type: 'start' | 'end') => {
+    e.stopPropagation()
+    if (!event.startDatetime || !event.endDatetime) return
+
+    setResizingEvent({
+      event,
+      type,
+      originalStart: event.startDatetime,
+      originalEnd: event.endDatetime,
+    })
+  }
+
+  // リサイズ中のハンドラー（マウス移動）
+  const handleResizeMove = (e: React.MouseEvent, targetDate: Date, targetHour: number) => {
+    if (!resizingEvent) return
+    e.preventDefault()
+  }
+
+  // リサイズ終了ハンドラー
+  const handleResizeEnd = async (targetDate: Date, targetHour: number) => {
+    if (!resizingEvent) return
+
+    const { event, type, originalStart, originalEnd } = resizingEvent
+
+    let newStart = originalStart
+    let newEnd = originalEnd
+
+    if (type === 'start') {
+      // 開始時刻を変更: ドロップした時間帯の開始時刻にスナップ
+      const newTime = new Date(targetDate)
+      newTime.setHours(targetHour, 0, 0, 0)
+
+      // 終了時刻より前でなければならない
+      if (newTime < originalEnd) {
+        newStart = newTime
+      }
+    } else {
+      // 終了時刻を変更: ドロップした時間帯の次の時刻にスナップ
+      const newTime = new Date(targetDate)
+      newTime.setHours(targetHour + 1, 0, 0, 0)
+
+      // 開始時刻より後でなければならない
+      if (newTime > originalStart) {
+        newEnd = newTime
+      }
+    }
+
+    // イベントを更新
+    if (newStart.getTime() !== originalStart.getTime() || newEnd.getTime() !== originalEnd.getTime()) {
+      const result = await updateEvent({
+        id: event.id,
+        startDatetime: newStart,
+        endDatetime: newEnd,
+      })
+
+      if (result.success) {
+        await handleModalClose(false)
+      }
+    }
+
+    setResizingEvent(null)
   }
 
   // ドラッグオーバーハンドラー
@@ -590,6 +681,12 @@ export default function CalendarPage() {
                 onDoubleClick={() => handleDateDoubleClick(day)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDropOnDate(e, day)}
+                onMouseUp={() => {
+                  // 終日行でリサイズ終了した場合はキャンセル
+                  if (resizingEvent) {
+                    setResizingEvent(null)
+                  }
+                }}
               >
                 <div className="space-y-1">
                   {allDayEvents.map((event) => (
@@ -639,6 +736,11 @@ export default function CalendarPage() {
                     onDoubleClick={() => handleDateDoubleClick(day)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDropOnTimeSlot(e, day, hour)}
+                    onMouseUp={() => {
+                      if (resizingEvent) {
+                        handleResizeEnd(day, hour)
+                      }
+                    }}
                   >
                     {eventLayouts.map(({ event, left, width }) => {
                       const startHour = event.startDatetime!.getHours()
@@ -652,34 +754,55 @@ export default function CalendarPage() {
                       return (
                         <div
                           key={event.id}
-                          draggable={event.type !== 'task'}
-                          className="absolute rounded text-xs p-1 overflow-hidden cursor-move hover:opacity-90 transition"
+                          draggable={event.type !== 'task' && !resizingEvent}
+                          className="absolute rounded text-xs overflow-hidden group transition"
                           style={{
                             backgroundColor: `${event.color}`,
                             top: `${topOffset}%`,
                             left: `${left}%`,
                             width: `${width - 1}%`, // 1%のマージンを追加
                             height: duration > 0 ? `${Math.min(duration * 64, 400)}px` : '60px',
-                            zIndex: 10,
+                            zIndex: resizingEvent?.event.id === event.id ? 20 : 10,
                             opacity: draggingEvent?.id === event.id ? 0.5 : 1,
+                            cursor: resizingEvent ? 'ns-resize' : 'move',
                           }}
                           onDragStart={(e) => handleDragStart(e, event)}
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleEdit(event)
+                            if (!resizingEvent) {
+                              handleEdit(event)
+                            }
                           }}
                         >
-                          <div className="text-white font-semibold truncate text-[10px]">
-                            {event.title}
-                          </div>
-                          <div className="text-white text-[10px] opacity-90">
-                            {format(event.startDatetime!, "HH:mm")}
-                            {event.endDatetime && ` - ${format(event.endDatetime, "HH:mm")}`}
-                          </div>
-                          {event.subjectName && duration > 0.5 && (
-                            <div className="text-white text-[10px] opacity-80 truncate">
-                              {event.subjectName}
+                          {/* 上端リサイズハンドル */}
+                          {event.type !== 'task' && (
+                            <div
+                              className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onMouseDown={(e) => handleResizeStart(e, event, 'start')}
+                            />
+                          )}
+
+                          <div className="p-1 pointer-events-none">
+                            <div className="text-white font-semibold truncate text-[10px]">
+                              {event.title}
                             </div>
+                            <div className="text-white text-[10px] opacity-90">
+                              {format(event.startDatetime!, "HH:mm")}
+                              {event.endDatetime && ` - ${format(event.endDatetime, "HH:mm")}`}
+                            </div>
+                            {event.subjectName && duration > 0.5 && (
+                              <div className="text-white text-[10px] opacity-80 truncate">
+                                {event.subjectName}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 下端リサイズハンドル */}
+                          {event.type !== 'task' && (
+                            <div
+                              className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onMouseDown={(e) => handleResizeStart(e, event, 'end')}
+                            />
                           )}
                         </div>
                       )
