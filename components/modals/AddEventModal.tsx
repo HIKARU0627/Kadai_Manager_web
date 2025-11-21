@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createEvent, EventType } from "@/app/actions/events"
+import { createEvent } from "@/app/actions/events"
 
 interface AddEventModalProps {
   open: boolean
@@ -28,8 +28,9 @@ interface AddEventModalProps {
   userId: string
   initialDate?: Date
   subjects?: Array<{ id: string; name: string; color: string }>
+  eventTypes?: Array<{ id: string; name: string; value: string; color: string }>
   defaultSubjectId?: string | null
-  defaultEventType?: EventType
+  defaultEventType?: string
 }
 
 const predefinedColors = [
@@ -49,6 +50,7 @@ export function AddEventModal({
   userId,
   initialDate,
   subjects = [],
+  eventTypes = [],
   defaultSubjectId = null,
   defaultEventType = "event",
 }: AddEventModalProps) {
@@ -56,7 +58,7 @@ export function AddEventModal({
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    eventType: defaultEventType as EventType,
+    eventType: defaultEventType,
     subjectId: defaultSubjectId || "",
     title: "",
     description: "",
@@ -84,7 +86,7 @@ export function AddEventModal({
       }
 
       setFormData({
-        eventType: defaultEventType as EventType,
+        eventType: defaultEventType,
         subjectId: defaultSubjectId || "",
         title: "",
         description: "",
@@ -173,17 +175,18 @@ export function AddEventModal({
     }
   }
 
+  const currentEventType = eventTypes.find(t => t.value === formData.eventType)
+  const eventTypeName = currentEventType?.name || "予定"
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {formData.eventType === "test" ? "テストを追加" : "予定を追加"}
+            {eventTypeName}を追加
           </DialogTitle>
           <DialogDescription>
-            {formData.eventType === "test"
-              ? "テストの日程を登録します。すべての項目は後から編集できます。"
-              : "個人的な予定を登録します。すべての項目は後から編集できます。"}
+            {eventTypeName}を登録します。すべての項目は後から編集できます。
           </DialogDescription>
         </DialogHeader>
 
@@ -196,7 +199,7 @@ export function AddEventModal({
               </Label>
               <Select
                 value={formData.eventType}
-                onValueChange={(value: EventType) =>
+                onValueChange={(value) =>
                   setFormData({ ...formData, eventType: value })
                 }
               >
@@ -204,8 +207,11 @@ export function AddEventModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="event">予定</SelectItem>
-                  <SelectItem value="test">テスト</SelectItem>
+                  {eventTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.value}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

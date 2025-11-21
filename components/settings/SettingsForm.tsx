@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { updateUsername, updateEmail, updatePassword, updateFullName } from "@/app/actions/users"
 import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { EventTypeSettings } from "./EventTypeSettings"
 
 interface SettingsFormProps {
   user: {
@@ -160,7 +161,7 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
       </Card>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-4 h-14 bg-gray-100">
           <TabsTrigger value="profile" className="text-base">
             <UserCircle className="w-5 h-5 mr-2" />
             プロフィール
@@ -172,6 +173,10 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
           <TabsTrigger value="security" className="text-base">
             <Shield className="w-5 h-5 mr-2" />
             セキュリティ
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="text-base">
+            <Calendar className="w-5 h-5 mr-2" />
+            カレンダー
           </TabsTrigger>
         </TabsList>
 
@@ -429,6 +434,11 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Calendar Tab */}
+        <TabsContent value="calendar" className="mt-6">
+          <EventTypeSettings userId={userId} />
         </TabsContent>
       </Tabs>
     </div>

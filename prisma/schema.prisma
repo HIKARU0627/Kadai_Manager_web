@@ -27,6 +27,7 @@ model User {
   reminders    Reminder[]
   semesters    Semester[]
   periods      Period[]
+  eventTypes   EventType[]
 
   @@map("users")
 }
@@ -186,4 +187,21 @@ model Period {
 
   @@unique([userId, periodNumber])
   @@map("periods")
+}
+
+model EventType {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   // 表示名（例: "予定", "テスト", "会議"）
+  value     String   // 内部値（例: "event", "test", "meeting"）
+  color     String   @default("#10B981") // デフォルトカラー
+  isDefault Boolean  @default(false) // デフォルトタイプ（削除不可）
+  order     Int      @default(0) // 表示順
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, value])
+  @@map("event_types")
 }

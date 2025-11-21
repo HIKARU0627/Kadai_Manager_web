@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { updateEvent, EventType } from "@/app/actions/events"
+import { updateEvent } from "@/app/actions/events"
 
 interface EditEventModalProps {
   open: boolean
@@ -29,7 +29,7 @@ interface EditEventModalProps {
     id: string
     title: string
     description: string | null
-    eventType?: EventType
+    eventType?: string
     subjectId?: string | null
     startDatetime: Date
     endDatetime: Date
@@ -37,6 +37,7 @@ interface EditEventModalProps {
     color: string
   } | null
   subjects?: Array<{ id: string; name: string; color: string }>
+  eventTypes?: Array<{ id: string; name: string; value: string; color: string }>
 }
 
 const predefinedColors = [
@@ -55,12 +56,13 @@ export function EditEventModal({
   onOpenChange,
   event,
   subjects = [],
+  eventTypes = [],
 }: EditEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    eventType: "event" as EventType,
+    eventType: "event",
     subjectId: "",
     title: "",
     description: "",
@@ -167,17 +169,18 @@ export function EditEventModal({
 
   if (!event) return null
 
+  const currentEventType = eventTypes.find(t => t.value === formData.eventType)
+  const eventTypeName = currentEventType?.name || "予定"
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {formData.eventType === "test" ? "テストを編集" : "予定を編集"}
+            {eventTypeName}を編集
           </DialogTitle>
           <DialogDescription>
-            {formData.eventType === "test"
-              ? "テストの情報を編集します。変更を保存するには「更新」をクリックしてください。"
-              : "予定の情報を編集します。変更を保存するには「更新」をクリックしてください。"}
+            {eventTypeName}の情報を編集します。変更を保存するには「更新」をクリックしてください。
           </DialogDescription>
         </DialogHeader>
 
@@ -190,7 +193,7 @@ export function EditEventModal({
               </Label>
               <Select
                 value={formData.eventType}
-                onValueChange={(value: EventType) =>
+                onValueChange={(value) =>
                   setFormData({ ...formData, eventType: value })
                 }
               >
@@ -198,8 +201,11 @@ export function EditEventModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="event">予定</SelectItem>
-                  <SelectItem value="test">テスト</SelectItem>
+                  {eventTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.value}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

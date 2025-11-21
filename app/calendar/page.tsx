@@ -27,6 +27,7 @@ import { ja } from "date-fns/locale"
 import { getMonthlyEvents, deleteEvent } from "@/app/actions/events"
 import { getTasks } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
+import { getEventTypes } from "@/app/actions/eventTypes"
 
 interface CalendarEvent {
   id: string
@@ -49,6 +50,13 @@ interface Subject {
   color: string
 }
 
+interface EventType {
+  id: string
+  name: string
+  value: string
+  color: string
+}
+
 export default function CalendarPage() {
   const { data: session } = useSession()
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -59,6 +67,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [eventTypes, setEventTypes] = useState<EventType[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [dateForNewEvent, setDateForNewEvent] = useState<Date | null>(null)
@@ -77,10 +86,11 @@ export default function CalendarPage() {
       const year = currentMonth.getFullYear()
       const month = currentMonth.getMonth()
 
-      const [eventsResult, tasksResult, subjectsResult] = await Promise.all([
+      const [eventsResult, tasksResult, subjectsResult, eventTypesResult] = await Promise.all([
         getMonthlyEvents(session.user.id, year, month),
         getTasks(session.user.id, {}),
         getSubjects(session.user.id),
+        getEventTypes(session.user.id),
       ])
 
       const calendarEvents: CalendarEvent[] = []
@@ -153,6 +163,15 @@ export default function CalendarPage() {
         })))
       }
 
+      if (eventTypesResult.success) {
+        setEventTypes(eventTypesResult.data.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          value: t.value,
+          color: t.color,
+        })))
+      }
+
       setEvents(calendarEvents)
       setIsLoading(false)
     }
@@ -184,10 +203,11 @@ export default function CalendarPage() {
       const year = currentMonth.getFullYear()
       const month = currentMonth.getMonth()
 
-      const [eventsResult, tasksResult, subjectsResult] = await Promise.all([
+      const [eventsResult, tasksResult, subjectsResult, eventTypesResult] = await Promise.all([
         getMonthlyEvents(session.user.id, year, month),
         getTasks(session.user.id, {}),
         getSubjects(session.user.id),
+        getEventTypes(session.user.id),
       ])
 
       const calendarEvents: CalendarEvent[] = []
@@ -255,6 +275,15 @@ export default function CalendarPage() {
           id: s.id,
           name: s.name,
           color: s.color,
+        })))
+      }
+
+      if (eventTypesResult.success) {
+        setEventTypes(eventTypesResult.data.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          value: t.value,
+          color: t.color,
         })))
       }
 
@@ -604,6 +633,7 @@ export default function CalendarPage() {
         userId={session?.user?.id || ""}
         initialDate={dateForNewEvent || undefined}
         subjects={subjects}
+        eventTypes={eventTypes}
       />
 
       {/* 予定編集モーダル */}
@@ -615,7 +645,7 @@ export default function CalendarPage() {
             id: selectedEvent.id,
             title: selectedEvent.title,
             description: selectedEvent.description || null,
-            eventType: selectedEvent.type as "event" | "test",
+            eventType: selectedEvent.type,
             subjectId: selectedEvent.subjectId,
             startDatetime: selectedEvent.startDatetime,
             endDatetime: selectedEvent.endDatetime,
@@ -623,6 +653,7 @@ export default function CalendarPage() {
             color: selectedEvent.color,
           } : null}
           subjects={subjects}
+          eventTypes={eventTypes}
         />
       )}
 

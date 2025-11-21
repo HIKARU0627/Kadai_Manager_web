@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { hash } from "bcryptjs"
+import { initializeDefaultEventTypes } from "./eventTypes"
 
 export interface RegisterUserInput {
   username: string
@@ -50,6 +51,9 @@ export async function registerUser(input: RegisterUserInput) {
         createdAt: true,
       },
     })
+
+    // デフォルトのEventTypeを初期化
+    await initializeDefaultEventTypes(user.id)
 
     return { success: true, data: user }
   } catch (error) {

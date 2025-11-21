@@ -30,10 +30,35 @@ async function main() {
     },
   })
 
+  // デフォルトのEventTypeを作成
+  await prisma.eventType.createMany({
+    data: [
+      {
+        userId: testUser.id,
+        name: "予定",
+        value: "event",
+        color: "#10B981",
+        isDefault: true,
+        order: 0,
+      },
+      {
+        userId: testUser.id,
+        name: "テスト",
+        value: "test",
+        color: "#EF4444",
+        isDefault: true,
+        order: 1,
+      },
+    ],
+  })
+
   console.log("テストユーザーを作成しました:")
   console.log("ID:", testUser.id)
   console.log("Email: test@example.com")
   console.log("Password: password123")
+  console.log("\nデフォルトのイベントタイプを作成しました:")
+  console.log("- 予定 (event)")
+  console.log("- テスト (test)")
   console.log("\nログインページ: http://localhost:3000/login")
   console.log("新規登録ページ: http://localhost:3000/signup")
 }
