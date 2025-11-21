@@ -16,6 +16,8 @@ model User {
   email        String     @unique
   passwordHash String
   fullName     String?
+  tactCookie   String?    // TACT (Sakai) authentication cookie
+  lastSyncAt   DateTime?  // Last sync timestamp from TACT
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -43,6 +45,7 @@ model Subject {
   dayOfWeek   Int?     // 0=日曜, 1=月曜, ..., 6=土曜 (regularの場合のみ)
   period      Int?     // 時限 (regularの場合のみ)
   color       String   @default("#3B82F6")
+  sakaiId     String?  // Sakai site ID for synced subjects
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -53,6 +56,7 @@ model Subject {
   notes       Note[]
   files       File[]
 
+  @@unique([userId, sakaiId])
   @@map("subjects")
 }
 
@@ -66,6 +70,7 @@ model Task {
   status      String    @default("not_started") // not_started, in_progress, completed
   priority    Int       @default(0) // 0=低, 1=中, 2=高
   taskType    String    @default("assignment") // assignment, quiz
+  sakaiId     String?   // Sakai assignment ID for synced tasks
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
@@ -75,6 +80,7 @@ model Task {
   files       File[]
   reminders   Reminder[]
 
+  @@unique([userId, sakaiId])
   @@map("tasks")
 }
 
@@ -106,6 +112,7 @@ model Note {
   title     String?
   content   String
   noteType  String    @default("general") // general, announcement
+  sakaiId   String?   // Sakai announcement ID for synced announcements
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -114,6 +121,7 @@ model Note {
   files     File[]
   reminders Reminder[]
 
+  @@unique([userId, sakaiId])
   @@map("notes")
 }
 
