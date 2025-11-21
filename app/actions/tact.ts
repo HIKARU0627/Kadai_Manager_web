@@ -13,6 +13,48 @@ import {
 import { revalidatePath } from "next/cache"
 
 /**
+ * Convert HTML to plain text
+ * Removes HTML tags and decodes HTML entities
+ */
+function htmlToPlainText(html: string | undefined | null): string {
+  if (!html) return ""
+
+  let text = html
+
+  // Replace <br>, <br/>, <br /> with line breaks first (before removing tags)
+  text = text.replace(/<br\s*\/?>/gi, "\n")
+
+  // Replace closing paragraph and div tags with line breaks
+  text = text.replace(/<\/(p|div)>/gi, "\n")
+
+  // Remove all remaining HTML tags
+  text = text.replace(/<[^>]*>/g, "")
+
+  // Decode common HTML entities
+  const entities: { [key: string]: string } = {
+    "&nbsp;": " ",
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'",
+    "&apos;": "'",
+  }
+
+  for (const [entity, char] of Object.entries(entities)) {
+    text = text.replace(new RegExp(entity, "g"), char)
+  }
+
+  // Decode numeric entities (e.g., &#8217;)
+  text = text.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+
+  // Trim whitespace and normalize line breaks
+  text = text.trim().replace(/\n\s*\n+/g, "\n\n")
+
+  return text
+}
+
+/**
  * Save TACT cookie to user settings
  */
 export async function saveTactCookie(userId: string, cookie: string) {
@@ -168,6 +210,9 @@ async function syncAssignments(
         dueDate = new Date(assignment.dueTimeString)
       }
 
+      // Convert HTML to plain text
+      const plainDescription = htmlToPlainText(assignment.instructions)
+
       // Check if task already exists
       const existing = await prisma.task.findFirst({
         where: {
@@ -182,7 +227,7 @@ async function syncAssignments(
           where: { id: existing.id },
           data: {
             title: assignment.title,
-            description: assignment.instructions || null,
+            description: plainDescription || null,
             dueDate,
             subjectId: subject?.id || null,
             updatedAt: new Date(),
@@ -195,7 +240,7 @@ async function syncAssignments(
             userId,
             sakaiId: assignment.id,
             title: assignment.title,
-            description: assignment.instructions || null,
+            description: plainDescription || null,
             dueDate,
             subjectId: subject?.id || null,
             taskType: "assignment",
@@ -241,6 +286,10 @@ async function syncAnnouncements(
         continue
       }
 
+      // Convert HTML to plain text
+      const plainTitle = htmlToPlainText(announcement.title)
+      const plainContent = htmlToPlainText(announcement.body)
+
       // Check if note already exists
       const existing = await prisma.note.findFirst({
         where: {
@@ -254,8 +303,8 @@ async function syncAnnouncements(
         await prisma.note.update({
           where: { id: existing.id },
           data: {
-            title: announcement.title,
-            content: announcement.body || "",
+            title: plainTitle || "（タイトルなし）",
+            content: plainContent || "",
             updatedAt: new Date(),
           },
         })
@@ -266,8 +315,8 @@ async function syncAnnouncements(
             userId,
             subjectId: subject.id,
             sakaiId: announcement.id,
-            title: announcement.title,
-            content: announcement.body || "",
+            title: plainTitle || "（タイトルなし）",
+            content: plainContent || "",
             noteType: "announcement",
           },
         })
