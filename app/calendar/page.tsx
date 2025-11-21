@@ -26,7 +26,7 @@ import {
   isToday,
 } from "date-fns"
 import { ja } from "date-fns/locale"
-import { getMonthlyEvents, deleteEvent } from "@/app/actions/events"
+import { getMonthlyEvents, deleteEvent, updateEvent } from "@/app/actions/events"
 import { getTasks } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
 import { getUserEventTypes, type EventTypeConfig } from "@/app/actions/eventTypes"
@@ -69,6 +69,7 @@ export default function CalendarPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [dateForNewEvent, setDateForNewEvent] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('month')
+  const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(null)
 
   // 表示範囲の計算
   const getDateRange = () => {
@@ -398,6 +399,92 @@ export default function CalendarPage() {
     setIsAddModalOpen(true)
   }
 
+  // ドラッグ開始ハンドラー
+  const handleDragStart = (e: React.DragEvent, event: CalendarEvent) => {
+    // 課題はドラッグ不可
+    if (event.type === 'task') {
+      e.preventDefault()
+      return
+    }
+    setDraggingEvent(event)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  // ドラッグオーバーハンドラー
+  const handleDragOver = (e: React.DragEvent) => {
+    if (draggingEvent) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+    }
+  }
+
+  // 月別表示でのドロップハンドラー（日付のみ変更）
+  const handleDropOnDate = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault()
+    if (!draggingEvent || !draggingEvent.startDatetime || !draggingEvent.endDatetime) {
+      setDraggingEvent(null)
+      return
+    }
+
+    const originalStart = draggingEvent.startDatetime
+    const originalEnd = draggingEvent.endDatetime
+
+    // 時刻は維持して日付のみ変更
+    const newStart = new Date(targetDate)
+    newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0)
+
+    const newEnd = new Date(targetDate)
+    newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), 0, 0)
+
+    // イベントを更新
+    const result = await updateEvent({
+      id: draggingEvent.id,
+      startDatetime: newStart,
+      endDatetime: newEnd,
+    })
+
+    if (result.success) {
+      // イベント一覧を再取得
+      await handleModalClose(false)
+    }
+
+    setDraggingEvent(null)
+  }
+
+  // 週別・3日別表示でのドロップハンドラー（日付と時刻を変更）
+  const handleDropOnTimeSlot = async (e: React.DragEvent, targetDate: Date, targetHour: number) => {
+    e.preventDefault()
+    if (!draggingEvent || !draggingEvent.startDatetime || !draggingEvent.endDatetime) {
+      setDraggingEvent(null)
+      return
+    }
+
+    const originalStart = draggingEvent.startDatetime
+    const originalEnd = draggingEvent.endDatetime
+    const duration = originalEnd.getTime() - originalStart.getTime()
+
+    // 新しい開始時刻
+    const newStart = new Date(targetDate)
+    newStart.setHours(targetHour, 0, 0, 0)
+
+    // 継続時間を維持して終了時刻を計算
+    const newEnd = new Date(newStart.getTime() + duration)
+
+    // イベントを更新
+    const result = await updateEvent({
+      id: draggingEvent.id,
+      startDatetime: newStart,
+      endDatetime: newEnd,
+    })
+
+    if (result.success) {
+      // イベント一覧を再取得
+      await handleModalClose(false)
+    }
+
+    setDraggingEvent(null)
+  }
+
   // 時間軸での表示（週別・3日別）
   const renderTimeGridCalendar = () => {
     const days = []
@@ -498,19 +585,25 @@ export default function CalendarPage() {
                 key={`allday-${dayIndex}`}
                 className={`border-r border-b p-1 min-h-12 cursor-pointer hover:bg-gray-50 ${
                   isTodayDate ? "bg-blue-50/30" : "bg-white"
-                }`}
+                } ${draggingEvent ? "bg-blue-50/20" : ""}`}
                 onClick={() => handleDateClick(day)}
                 onDoubleClick={() => handleDateDoubleClick(day)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDropOnDate(e, day)}
               >
                 <div className="space-y-1">
                   {allDayEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="text-xs p-1 rounded truncate"
+                      draggable={event.type !== 'task'}
+                      className="text-xs p-1 rounded truncate cursor-move"
                       style={{
                         backgroundColor: `${event.color}20`,
                         borderLeft: `3px solid ${event.color}`,
+                        opacity: draggingEvent?.id === event.id ? 0.5 : 1,
                       }}
+                      onDragStart={(e) => handleDragStart(e, event)}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {event.title}
                     </div>
@@ -541,9 +634,11 @@ export default function CalendarPage() {
                     key={`${dayIndex}-${hour}`}
                     className={`border-r border-b p-1 min-h-16 relative cursor-pointer hover:bg-gray-50 ${
                       isTodayDate ? "bg-blue-50/30" : "bg-white"
-                    }`}
+                    } ${draggingEvent ? "bg-blue-50/20" : ""}`}
                     onClick={() => handleDateClick(day)}
                     onDoubleClick={() => handleDateDoubleClick(day)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDropOnTimeSlot(e, day, hour)}
                   >
                     {eventLayouts.map(({ event, left, width }) => {
                       const startHour = event.startDatetime!.getHours()
@@ -557,7 +652,8 @@ export default function CalendarPage() {
                       return (
                         <div
                           key={event.id}
-                          className="absolute rounded text-xs p-1 overflow-hidden cursor-pointer hover:opacity-90 transition"
+                          draggable={event.type !== 'task'}
+                          className="absolute rounded text-xs p-1 overflow-hidden cursor-move hover:opacity-90 transition"
                           style={{
                             backgroundColor: `${event.color}`,
                             top: `${topOffset}%`,
@@ -565,7 +661,9 @@ export default function CalendarPage() {
                             width: `${width - 1}%`, // 1%のマージンを追加
                             height: duration > 0 ? `${Math.min(duration * 64, 400)}px` : '60px',
                             zIndex: 10,
+                            opacity: draggingEvent?.id === event.id ? 0.5 : 1,
                           }}
+                          onDragStart={(e) => handleDragStart(e, event)}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleEdit(event)
@@ -625,13 +723,15 @@ export default function CalendarPage() {
                 key={dayIndex}
                 onClick={() => handleDateClick(day)}
                 onDoubleClick={() => handleDateDoubleClick(day)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDropOnDate(e, day)}
                 className={`min-h-24 p-2 border rounded-lg cursor-pointer transition ${
                   isCurrentMonth
                     ? "bg-white hover:bg-gray-50"
                     : "bg-gray-50 text-gray-400"
                 } ${isSelected ? "ring-2 ring-blue-500" : ""} ${
                   isTodayDate ? "border-blue-500 border-2" : ""
-                }`}
+                } ${draggingEvent ? "bg-blue-50/20" : ""}`}
               >
                 <div className="flex justify-between items-center mb-1">
                   <span
@@ -651,11 +751,15 @@ export default function CalendarPage() {
                   {dayEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}
-                      className="text-xs p-1 rounded truncate"
+                      draggable={event.type !== 'task'}
+                      className="text-xs p-1 rounded truncate cursor-move"
                       style={{
                         backgroundColor: `${event.color}20`,
                         borderLeft: `3px solid ${event.color}`,
+                        opacity: draggingEvent?.id === event.id ? 0.5 : 1,
                       }}
+                      onDragStart={(e) => handleDragStart(e, event)}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {event.title}
                     </div>
