@@ -17,6 +17,7 @@ import { PeriodManagementModal } from "@/components/modals/PeriodManagementModal
 import { Plus, Clock, MapPin, User, FileText, CalendarPlus } from "lucide-react"
 import { getWeeklySchedule, getSubjects, deleteSubject } from "@/app/actions/subjects"
 import { getPeriods } from "@/app/actions/periods"
+import { getUserEventTypes, type EventTypeConfig } from "@/app/actions/eventTypes"
 
 const weekDays = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日"]
 
@@ -53,6 +54,7 @@ export default function SubjectsPage() {
   const [schedule, setSchedule] = useState<{ [key: number]: { [key: number]: Subject } }>({})
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [periods, setPeriods] = useState<Period[]>([])
+  const [eventTypes, setEventTypes] = useState<EventTypeConfig[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [defaultDayOfWeek, setDefaultDayOfWeek] = useState<number | null>(null)
@@ -64,10 +66,11 @@ export default function SubjectsPage() {
       if (!session?.user?.id) return
 
       setIsLoading(true)
-      const [scheduleResult, subjectsResult, periodsData] = await Promise.all([
+      const [scheduleResult, subjectsResult, periodsData, eventTypesResult] = await Promise.all([
         getWeeklySchedule(session.user.id, selectedSemesterId || undefined),
         getSubjects(session.user.id, selectedSemesterId || undefined),
         getPeriods(session.user.id),
+        getUserEventTypes(),
       ])
 
       if (scheduleResult.success) {
@@ -79,6 +82,7 @@ export default function SubjectsPage() {
       }
 
       setPeriods(periodsData)
+      setEventTypes(eventTypesResult)
 
       setIsLoading(false)
     }
@@ -479,7 +483,7 @@ export default function SubjectsPage() {
         userId={session?.user?.id || ""}
         subjects={subjects}
         defaultSubjectId={selectedSubject?.id || null}
-        defaultEventType="test"
+        defaultEventType={eventTypes.find((et) => et.name === "テスト")?.id}
       />
     </div>
   )
