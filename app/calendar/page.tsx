@@ -76,6 +76,7 @@ export default function CalendarPage() {
     originalStart: Date
     originalEnd: Date
   } | null>(null)
+  const [justResized, setJustResized] = useState(false)
 
   // 表示範囲の計算
   const getDateRange = () => {
@@ -125,6 +126,8 @@ export default function CalendarPage() {
       if (resizingEvent) {
         // イベント要素外でマウスアップした場合はキャンセル
         setResizingEvent(null)
+        // 少し遅延してからクリックを再度有効化
+        setTimeout(() => setJustResized(false), 100)
       }
     }
 
@@ -440,6 +443,7 @@ export default function CalendarPage() {
   // リサイズ開始ハンドラー
   const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent, type: 'start' | 'end') => {
     e.stopPropagation()
+    e.preventDefault()
     if (!event.startDatetime || !event.endDatetime) return
 
     setResizingEvent({
@@ -448,6 +452,9 @@ export default function CalendarPage() {
       originalStart: event.startDatetime,
       originalEnd: event.endDatetime,
     })
+
+    // リサイズ操作開始時にクリックを一時的に無効化
+    setJustResized(true)
   }
 
   // リサイズ中のハンドラー（マウス移動）
@@ -499,6 +506,8 @@ export default function CalendarPage() {
     }
 
     setResizingEvent(null)
+    // 少し遅延してからクリックを再度有効化
+    setTimeout(() => setJustResized(false), 100)
   }
 
   // ドラッグオーバーハンドラー
@@ -769,7 +778,8 @@ export default function CalendarPage() {
                           onDragStart={(e) => handleDragStart(e, event)}
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (!resizingEvent) {
+                            // リサイズ直後やリサイズ中はクリックを無視
+                            if (!resizingEvent && !justResized) {
                               handleEdit(event)
                             }
                           }}
