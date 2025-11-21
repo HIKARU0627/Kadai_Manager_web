@@ -55,12 +55,12 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
 
   // 追加フォーム
   const [showAddForm, setShowAddForm] = useState(false)
-  const [addForm, setAddForm] = useState({ name: "", value: "", color: "#10B981" })
+  const [addForm, setAddForm] = useState({ name: "", color: "#10B981" })
   const [addLoading, setAddLoading] = useState(false)
 
   // 編集状態
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ name: "", value: "", color: "" })
+  const [editForm, setEditForm] = useState({ name: "", color: "" })
 
   // 削除確認ダイアログ
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -90,8 +90,8 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
 
   // 追加処理
   const handleAdd = async () => {
-    if (!addForm.name.trim() || !addForm.value.trim()) {
-      setError("名前と値を入力してください")
+    if (!addForm.name.trim()) {
+      setError("名前を入力してください")
       return
     }
 
@@ -103,13 +103,12 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
       const result = await createEventType({
         userId,
         name: addForm.name.trim(),
-        value: addForm.value.trim(),
         color: addForm.color,
       })
 
       if (result.success) {
         setSuccess("イベントタイプを追加しました")
-        setAddForm({ name: "", value: "", color: "#10B981" })
+        setAddForm({ name: "", color: "#10B981" })
         setShowAddForm(false)
         await loadEventTypes()
       } else {
@@ -127,7 +126,6 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
     setEditingId(eventType.id)
     setEditForm({
       name: eventType.name,
-      value: eventType.value,
       color: eventType.color,
     })
     setError(null)
@@ -137,13 +135,13 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
   // 編集キャンセル
   const cancelEdit = () => {
     setEditingId(null)
-    setEditForm({ name: "", value: "", color: "" })
+    setEditForm({ name: "", color: "" })
   }
 
   // 編集保存
   const saveEdit = async (id: string) => {
-    if (!editForm.name.trim() || !editForm.value.trim()) {
-      setError("名前と値を入力してください")
+    if (!editForm.name.trim()) {
+      setError("名前を入力してください")
       return
     }
 
@@ -154,7 +152,6 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
       const result = await updateEventType({
         id,
         name: editForm.name.trim(),
-        value: editForm.value.trim(),
         color: editForm.color,
       })
 
@@ -242,19 +239,12 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
               {editingId === eventType.id ? (
                 // 編集モード
                 <>
-                  <div className="flex-1 grid grid-cols-3 gap-3">
+                  <div className="flex-1 grid grid-cols-2 gap-3">
                     <Input
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       placeholder="表示名"
                       className="h-9"
-                    />
-                    <Input
-                      value={editForm.value}
-                      onChange={(e) => setEditForm({ ...editForm, value: e.target.value })}
-                      placeholder="内部値"
-                      className="h-9"
-                      disabled={eventType.isDefault}
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -294,7 +284,6 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
                   />
                   <div className="flex-1">
                     <div className="font-medium text-gray-800">{eventType.name}</div>
-                    <div className="text-sm text-gray-500">値: {eventType.value}</div>
                   </div>
                   {eventType.isDefault && (
                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -333,25 +322,13 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
             <div className="grid gap-3">
               <div>
                 <Label htmlFor="add-name" className="text-sm">
-                  表示名 <span className="text-red-500">*</span>
+                  名前 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="add-name"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                   placeholder="例: 会議"
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <Label htmlFor="add-value" className="text-sm">
-                  内部値 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="add-value"
-                  value={addForm.value}
-                  onChange={(e) => setAddForm({ ...addForm, value: e.target.value })}
-                  placeholder="例: meeting (英数字・ハイフン・アンダースコアのみ)"
                   className="h-9"
                 />
               </div>
@@ -381,7 +358,7 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
                 variant="outline"
                 onClick={() => {
                   setShowAddForm(false)
-                  setAddForm({ name: "", value: "", color: "#10B981" })
+                  setAddForm({ name: "", color: "#10B981" })
                 }}
                 disabled={addLoading}
               >
@@ -409,7 +386,6 @@ export function EventTypeSettings({ userId }: EventTypeSettingsProps) {
           <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
             <li>「予定」と「テスト」はデフォルトタイプのため削除できません</li>
             <li>イベントタイプを削除する前に、そのタイプを使用している予定のタイプを変更してください</li>
-            <li>内部値は他のシステムとの連携に使用される場合があるため、慎重に設定してください</li>
           </ul>
         </div>
       </CardContent>

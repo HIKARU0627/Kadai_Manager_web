@@ -18,7 +18,6 @@ export interface EventType {
 export interface CreateEventTypeInput {
   userId: string
   name: string
-  value: string
   color?: string
   order?: number
 }
@@ -26,7 +25,6 @@ export interface CreateEventTypeInput {
 export interface UpdateEventTypeInput {
   id: string
   name?: string
-  value?: string
   color?: string
   order?: number
 }
@@ -34,25 +32,14 @@ export interface UpdateEventTypeInput {
 // イベントタイプを作成
 export async function createEventType(input: CreateEventTypeInput) {
   try {
-    // 同じvalueが既に存在しないかチェック
-    const existing = await prisma.eventType.findUnique({
-      where: {
-        userId_value: {
-          userId: input.userId,
-          value: input.value,
-        },
-      },
-    })
-
-    if (existing) {
-      return { success: false, error: "同じ値のイベントタイプが既に存在します" }
-    }
+    // 内部値を自動生成（ユニークなID）
+    const value = crypto.randomUUID()
 
     const eventType = await prisma.eventType.create({
       data: {
         userId: input.userId,
         name: input.name,
-        value: input.value,
+        value: value,
         color: input.color || "#10B981",
         order: input.order ?? 999,
       },
@@ -71,43 +58,11 @@ export async function createEventType(input: CreateEventTypeInput) {
 // イベントタイプを更新
 export async function updateEventType(input: UpdateEventTypeInput) {
   try {
-    // 更新前にデフォルトタイプかどうかチェック
-    const eventType = await prisma.eventType.findUnique({
-      where: { id: input.id },
-    })
-
-    if (!eventType) {
-      return { success: false, error: "イベントタイプが見つかりません" }
-    }
-
     const updateData: any = { updatedAt: new Date() }
 
     if (input.name !== undefined) updateData.name = input.name
     if (input.color !== undefined) updateData.color = input.color
     if (input.order !== undefined) updateData.order = input.order
-
-    // valueの変更はデフォルトタイプでは不可
-    if (input.value !== undefined) {
-      if (eventType.isDefault) {
-        return { success: false, error: "デフォルトのイベントタイプの値は変更できません" }
-      }
-
-      // 同じvalueが既に存在しないかチェック
-      const existing = await prisma.eventType.findUnique({
-        where: {
-          userId_value: {
-            userId: eventType.userId,
-            value: input.value,
-          },
-        },
-      })
-
-      if (existing && existing.id !== input.id) {
-        return { success: false, error: "同じ値のイベントタイプが既に存在します" }
-      }
-
-      updateData.value = input.value
-    }
 
     const updated = await prisma.eventType.update({
       where: { id: input.id },
