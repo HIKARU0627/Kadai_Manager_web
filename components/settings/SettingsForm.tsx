@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateUsername, updateEmail, updatePassword, updateFullName } from "@/app/actions/users"
-import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle } from "lucide-react"
+import { User, Mail, Lock, UserCircle, Shield, Calendar, CheckCircle2, AlertCircle, Palette } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { EventTypeSettings } from "./EventTypeSettings"
 
 interface SettingsFormProps {
   user: {
@@ -160,7 +161,7 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
       </Card>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-4 h-14 bg-gray-100">
           <TabsTrigger value="profile" className="text-base">
             <UserCircle className="w-5 h-5 mr-2" />
             プロフィール
@@ -172,6 +173,10 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
           <TabsTrigger value="security" className="text-base">
             <Shield className="w-5 h-5 mr-2" />
             セキュリティ
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="text-base">
+            <Palette className="w-5 h-5 mr-2" />
+            予定の種類
           </TabsTrigger>
         </TabsList>
 
@@ -427,6 +432,24 @@ export function SettingsForm({ user, userId }: SettingsFormProps) {
                   </ul>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Calendar Tab */}
+        <TabsContent value="calendar" className="mt-6">
+          <Card className="border-none shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
+              <CardTitle className="flex items-center text-xl">
+                <Palette className="w-6 h-6 mr-2" />
+                予定の種類
+              </CardTitle>
+              <CardDescription className="text-orange-100">
+                カレンダーに表示する予定の種類をカスタマイズ
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <EventTypeSettings />
             </CardContent>
           </Card>
         </TabsContent>

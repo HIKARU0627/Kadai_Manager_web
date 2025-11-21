@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { updateEvent, EventType } from "@/app/actions/events"
+import { updateEvent } from "@/app/actions/events"
+import { getUserEventTypes, type EventTypeConfig } from "@/app/actions/eventTypes"
 
 interface EditEventModalProps {
   open: boolean
@@ -29,7 +30,7 @@ interface EditEventModalProps {
     id: string
     title: string
     description: string | null
-    eventType?: EventType
+    eventType?: string
     subjectId?: string | null
     startDatetime: Date
     endDatetime: Date
@@ -58,9 +59,11 @@ export function EditEventModal({
 }: EditEventModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [eventTypes, setEventTypes] = useState<EventTypeConfig[]>([])
+  const [loadingEventTypes, setLoadingEventTypes] = useState(true)
 
   const [formData, setFormData] = useState({
-    eventType: "event" as EventType,
+    eventType: "event",
     subjectId: "",
     title: "",
     description: "",
@@ -69,6 +72,25 @@ export function EditEventModal({
     location: "",
     color: "#10B981",
   })
+
+  // イベントタイプを読み込む
+  useEffect(() => {
+    const loadEventTypes = async () => {
+      try {
+        setLoadingEventTypes(true)
+        const types = await getUserEventTypes()
+        setEventTypes(types)
+      } catch (err) {
+        console.error("Failed to load event types:", err)
+      } finally {
+        setLoadingEventTypes(false)
+      }
+    }
+
+    if (open) {
+      loadEventTypes()
+    }
+  }, [open])
 
   // event が変更されたときにフォームデータを更新
   useEffect(() => {
@@ -97,6 +119,9 @@ export function EditEventModal({
     }
   }, [event])
 
+  // 現在選択されているイベントタイプの設定を取得
+  const selectedEventType = eventTypes.find((et) => et.id === formData.eventType)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!event) return
@@ -112,9 +137,9 @@ export function EditEventModal({
         return
       }
 
-      // テストの場合は科目が必須
-      if (formData.eventType === "test" && !formData.subjectId) {
-        setError("テストの場合は科目を選択してください")
+      // 科目が必須なイベントタイプの場合
+      if (selectedEventType?.requiresSubject && !formData.subjectId) {
+        setError(`${selectedEventType.name}の場合は科目を選択してください`)
         setIsSubmitting(false)
         return
       }
@@ -172,11 +197,11 @@ export function EditEventModal({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {formData.eventType === "test" ? "テストを編集" : "予定を編集"}
+            {selectedEventType ? `${selectedEventType.name}を編集` : "予定を編集"}
           </DialogTitle>
           <DialogDescription>
-            {formData.eventType === "test"
-              ? "テストの情報を編集します。変更を保存するには「更新」をクリックしてください。"
+            {selectedEventType
+              ? `${selectedEventType.name}の情報を編集します。変更を保存するには「更新」をクリックしてください。`
               : "予定の情報を編集します。変更を保存するには「更新」をクリックしてください。"}
           </DialogDescription>
         </DialogHeader>
@@ -190,22 +215,32 @@ export function EditEventModal({
               </Label>
               <Select
                 value={formData.eventType}
-                onValueChange={(value: EventType) =>
+                onValueChange={(value) =>
                   setFormData({ ...formData, eventType: value })
                 }
+                disabled={loadingEventTypes}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="event">予定</SelectItem>
-                  <SelectItem value="test">テスト</SelectItem>
+                  {eventTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      <div className="flex items-center">
+                        <div
+                          className="w-3 h-3 rounded mr-2"
+                          style={{ backgroundColor: type.color }}
+                        />
+                        {type.name}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* 科目選択 (テストの場合のみ表示) */}
-            {formData.eventType === "test" && (
+            {/* 科目選択 (科目が必須なタイプの場合のみ表示) */}
+            {selectedEventType?.requiresSubject && (
               <div className="grid gap-2">
                 <Label htmlFor="subject">
                   科目 <span className="text-red-500">*</span>
@@ -242,7 +277,7 @@ export function EditEventModal({
                   setFormData({ ...formData, title: e.target.value })
                 }
                 placeholder={
-                  formData.eventType === "test"
+                  selectedEventType?.requiresSubject
                     ? "例: 中間テスト"
                     : "例: 歯医者の予約"
                 }
@@ -307,7 +342,7 @@ export function EditEventModal({
                   setFormData({ ...formData, location: e.target.value })
                 }
                 placeholder={
-                  formData.eventType === "test"
+                  selectedEventType?.requiresSubject
                     ? "例: A棟201教室"
                     : "例: 中央歯科クリニック"
                 }
