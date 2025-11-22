@@ -48,6 +48,9 @@ export default function SemesterSelector({
         const activeSemester = await getActiveSemester();
         if (activeSemester) {
           onSemesterChange(activeSemester.id);
+        } else if (data.length > 0) {
+          // アクティブな学期がない場合は、最初の学期を選択
+          onSemesterChange(data[0].id);
         }
       }
     } catch (error) {
@@ -70,15 +73,14 @@ export default function SemesterSelector({
   return (
     <div className="flex items-center gap-2">
       <Select
-        value={selectedSemesterId || 'all'}
-        onValueChange={(value) => onSemesterChange(value === 'all' ? null : value)}
+        value={selectedSemesterId || ''}
+        onValueChange={(value) => onSemesterChange(value)}
         disabled={isLoading}
       >
         <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="学期を選択" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">すべての学期</SelectItem>
           {semesters.map((semester) => (
             <SelectItem key={semester.id} value={semester.id}>
               {semester.year}年度 {semester.name}
