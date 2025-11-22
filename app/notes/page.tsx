@@ -382,14 +382,14 @@ export default function NotesPage() {
                       </div>
 
                       <h3
-                        className="text-xl font-semibold text-gray-800 mb-2 cursor-pointer hover:text-blue-600 transition"
+                        className="text-xl font-semibold text-gray-800 mb-2 cursor-pointer hover:text-blue-600 transition line-clamp-1"
                         onClick={() => handleViewDetail(note)}
                       >
                         {note.title || "無題"}
                       </h3>
 
                       <p
-                        className="text-gray-600 mb-3 cursor-pointer hover:text-gray-800 transition"
+                        className="text-gray-600 mb-3 cursor-pointer hover:text-gray-800 transition line-clamp-3"
                         onClick={() => handleViewDetail(note)}
                       >
                         {note.content}
