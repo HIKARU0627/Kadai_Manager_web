@@ -104,7 +104,7 @@ export function FileManagerContent({
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
-  const [groupBySubject, setGroupBySubject] = useState(false)
+  const [groupBySubject, setGroupBySubject] = useState(true)
 
   // 学期でフィルタリングされた科目リスト
   const filteredSubjects = useMemo(() => {
@@ -129,18 +129,6 @@ export function FileManagerContent({
   // ファイルのフィルタリングとソート
   const filteredAndSortedFiles = useMemo(() => {
     let result = [...files]
-
-    // デバッグ: 初期ファイル数を確認
-    console.log('[FileManager] Total files:', files.length)
-    console.log('[FileManager] Files with fileSource:', files.filter(f => f.fileSource).length)
-    console.log('[FileManager] Filter settings:', {
-      searchQuery,
-      filterType,
-      filterResource,
-      filterFileSource,
-      filterSubjectId,
-      selectedSemesterId
-    })
 
     // 検索フィルター
     if (searchQuery) {
@@ -225,9 +213,6 @@ export function FileManagerContent({
       return sortOrder === "asc" ? comparison : -comparison
     })
 
-    // デバッグ: フィルタリング後のファイル数を確認
-    console.log('[FileManager] Filtered files:', result.length)
-
     return result
   }, [files, searchQuery, filterType, filterResource, filterFileSource, filterSubjectId, sortField, sortOrder, selectedSemesterId, filteredSubjects])
 
@@ -238,13 +223,24 @@ export function FileManagerContent({
     const groups: { [key: string]: FileItem[] } = {}
 
     filteredAndSortedFiles.forEach((file) => {
+      // 科目に直接関連付けられている場合
       if (file.subjectId && file.subject) {
         const key = file.subjectId
         if (!groups[key]) {
           groups[key] = []
         }
         groups[key].push(file)
-      } else {
+      }
+      // 課題を通じて科目に関連付けられている場合
+      else if (file.taskId && file.task?.subject) {
+        const key = file.task.subject.id
+        if (!groups[key]) {
+          groups[key] = []
+        }
+        groups[key].push(file)
+      }
+      // その他（未関連付け）
+      else {
         if (!groups["unrelated"]) {
           groups["unrelated"] = []
         }
@@ -872,10 +868,13 @@ export function FileManagerContent({
               // 科目別グループ表示
               <div className="space-y-6">
                 {Object.entries(groupedBySubject).map(([groupKey, groupFiles]) => {
+                  // グループ名を取得（科目直接 or 課題経由の科目）
                   const subjectName =
                     groupKey === "unrelated"
                       ? "未関連付け"
-                      : groupFiles[0]?.subject?.name || "不明"
+                      : groupFiles[0]?.subject?.name ||
+                        groupFiles[0]?.task?.subject?.name ||
+                        "不明"
 
                   return (
                     <div key={groupKey} className="space-y-3">
