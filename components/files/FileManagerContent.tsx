@@ -45,6 +45,7 @@ interface FileItem {
   fileUrl: string | null
   fileType: string | null
   fileSize: number | null
+  fileSource: string | null
   createdAt: Date | string
   taskId: string | null
   noteId: string | null
@@ -88,6 +89,7 @@ export function FileManagerContent({
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterResource, setFilterResource] = useState<string>("all")
+  const [filterFileSource, setFilterFileSource] = useState<string>("all")
   const [filterSubjectId, setFilterSubjectId] = useState<string>("all")
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>("list")
@@ -156,6 +158,16 @@ export function FileManagerContent({
       })
     }
 
+    // ファイルソースフィルター
+    if (filterFileSource !== "all") {
+      result = result.filter((file) => {
+        if (filterFileSource === "local") return file.fileSource === "local" || !file.fileSource
+        if (filterFileSource === "sakai_assignment") return file.fileSource === "sakai_assignment"
+        if (filterFileSource === "sakai_submission") return file.fileSource === "sakai_submission"
+        return true
+      })
+    }
+
     // 学期フィルター（科目に関連付けられているファイルのみ）
     if (selectedSemesterId) {
       const filteredSubjectIds = new Set(filteredSubjects.map((s) => s.id))
@@ -189,7 +201,7 @@ export function FileManagerContent({
     })
 
     return result
-  }, [files, searchQuery, filterType, filterResource, filterSubjectId, sortField, sortOrder, selectedSemesterId, filteredSubjects])
+  }, [files, searchQuery, filterType, filterResource, filterFileSource, filterSubjectId, sortField, sortOrder, selectedSemesterId, filteredSubjects])
 
   // 科目別グループ化
   const groupedBySubject = useMemo(() => {
@@ -261,6 +273,18 @@ export function FileManagerContent({
     if (file.noteId) return <StickyNote className="w-4 h-4 text-yellow-500" />
     if (file.subjectId) return <BookOpen className="w-4 h-4 text-blue-500" />
     return <FolderOpen className="w-4 h-4 text-gray-400" />
+  }
+
+  const getFileSourceLabel = (source: string | null) => {
+    switch (source) {
+      case "sakai_assignment":
+        return { label: "課題添付", color: "bg-blue-100 text-blue-700" }
+      case "sakai_submission":
+        return { label: "提出済み", color: "bg-green-100 text-green-700" }
+      case "local":
+      default:
+        return { label: "手動追加", color: "bg-gray-100 text-gray-700" }
+    }
   }
 
   const handleFileDelete = async (fileId: string) => {
@@ -343,135 +367,59 @@ export function FileManagerContent({
   }
 
   // ファイルアイテムのレンダリング（リスト表示）
-  const renderFileListItem = (file: FileItem) => (
-    <div
-      key={file.id}
-      className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-    >
-      <Checkbox
-        checked={selectedFiles.has(file.id)}
-        onCheckedChange={() => toggleFileSelection(file.id)}
-      />
+  const renderFileListItem = (file: FileItem) => {
+    const sourceInfo = getFileSourceLabel(file.fileSource)
 
-      <FileIcon className="w-6 h-6 text-blue-600 flex-shrink-0" />
-
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{file.fileName}</p>
-        <div className="flex items-center gap-3 mt-1">
-          <span className="text-xs text-gray-500">
-            {formatFileSize(file.fileSize)}
-          </span>
-          <span className="text-xs text-gray-400">•</span>
-          <span className="text-xs text-gray-500">
-            {format(new Date(file.createdAt), "yyyy/MM/dd HH:mm", {
-              locale: ja,
-            })}
-          </span>
-          {!groupBySubject && (
-            <>
-              <span className="text-xs text-gray-400">•</span>
-              <div className="flex items-center gap-1">
-                {getRelatedResourceIcon(file)}
-                <span className="text-xs text-gray-500">
-                  {getRelatedResourceName(file)}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1">
-        {isPreviewable(file.fileType) && file.fileUrl && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleFilePreview(file)}
-            title="プレビュー"
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
-        )}
-        {file.fileUrl && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleFileDownload(file.fileUrl!, file.fileName)}
-            title="ダウンロード"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => handleFileDelete(file.id)}
-          disabled={isDeleting === file.id}
-          title="削除"
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
-  )
-
-  // ファイルアイテムのレンダリング（グリッド表示）
-  const renderFileGridItem = (file: FileItem) => (
-    <div
-      key={file.id}
-      className="relative group border rounded-lg p-4 bg-white hover:shadow-md transition"
-    >
-      <div className="absolute top-2 left-2 z-10">
+    return (
+      <div
+        key={file.id}
+        className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+      >
         <Checkbox
           checked={selectedFiles.has(file.id)}
           onCheckedChange={() => toggleFileSelection(file.id)}
-          className="bg-white"
         />
-      </div>
 
-      <div className="flex flex-col items-center">
-        {file.fileType?.startsWith("image/") && file.fileUrl ? (
-          <div
-            className="w-full h-32 bg-gray-100 rounded mb-3 cursor-pointer overflow-hidden"
-            onClick={() => handleFilePreview(file)}
-          >
-            <img
-              src={file.fileUrl}
-              alt={file.fileName}
-              className="w-full h-full object-cover"
-            />
+        <FileIcon className="w-6 h-6 text-blue-600 flex-shrink-0" />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-medium truncate">{file.fileName}</p>
+            <Badge className={`text-xs ${sourceInfo.color}`}>
+              {sourceInfo.label}
+            </Badge>
           </div>
-        ) : (
-          <div className="w-full h-32 bg-gray-100 rounded mb-3 flex items-center justify-center">
-            <FileIcon className="w-12 h-12 text-gray-400" />
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">
+              {formatFileSize(file.fileSize)}
+            </span>
+            <span className="text-xs text-gray-400">•</span>
+            <span className="text-xs text-gray-500">
+              {format(new Date(file.createdAt), "yyyy/MM/dd HH:mm", {
+                locale: ja,
+              })}
+            </span>
+            {!groupBySubject && (
+              <>
+                <span className="text-xs text-gray-400">•</span>
+                <div className="flex items-center gap-1">
+                  {getRelatedResourceIcon(file)}
+                  <span className="text-xs text-gray-500">
+                    {getRelatedResourceName(file)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
-        )}
+        </div>
 
-        <p
-          className="text-sm font-medium text-center truncate w-full mb-2"
-          title={file.fileName}
-        >
-          {file.fileName}
-        </p>
-
-        {!groupBySubject && (
-          <div className="flex items-center gap-1 mb-2">
-            {getRelatedResourceIcon(file)}
-          </div>
-        )}
-
-        <p className="text-xs text-gray-500 mb-3">
-          {formatFileSize(file.fileSize)}
-        </p>
-
-        <div className="flex items-center gap-1 w-full">
+        <div className="flex items-center gap-1">
           {isPreviewable(file.fileType) && file.fileUrl && (
             <Button
               size="sm"
               variant="ghost"
               onClick={() => handleFilePreview(file)}
-              className="flex-1"
+              title="プレビュー"
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -481,24 +429,121 @@ export function FileManagerContent({
               size="sm"
               variant="ghost"
               onClick={() => handleFileDownload(file.fileUrl!, file.fileName)}
-              className="flex-1"
+              title="ダウンロード"
             >
               <Download className="w-4 h-4" />
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleFileDelete(file.id)}
-            disabled={isDeleting === file.id}
-            className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          {file.fileSource === "local" || !file.fileSource ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleFileDelete(file.id)}
+              disabled={isDeleting === file.id}
+              title="削除"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  // ファイルアイテムのレンダリング（グリッド表示）
+  const renderFileGridItem = (file: FileItem) => {
+    const sourceInfo = getFileSourceLabel(file.fileSource)
+
+    return (
+      <div
+        key={file.id}
+        className="relative group border rounded-lg p-4 bg-white hover:shadow-md transition"
+      >
+        <div className="absolute top-2 left-2 z-10">
+          <Checkbox
+            checked={selectedFiles.has(file.id)}
+            onCheckedChange={() => toggleFileSelection(file.id)}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col items-center">
+          {file.fileType?.startsWith("image/") && file.fileUrl ? (
+            <div
+              className="w-full h-32 bg-gray-100 rounded mb-3 cursor-pointer overflow-hidden"
+              onClick={() => handleFilePreview(file)}
+            >
+              <img
+                src={file.fileUrl}
+                alt={file.fileName}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-32 bg-gray-100 rounded mb-3 flex items-center justify-center">
+              <FileIcon className="w-12 h-12 text-gray-400" />
+            </div>
+          )}
+
+          <p
+            className="text-sm font-medium text-center truncate w-full mb-2"
+            title={file.fileName}
+          >
+            {file.fileName}
+          </p>
+
+          <Badge className={`text-xs mb-2 ${sourceInfo.color}`}>
+            {sourceInfo.label}
+          </Badge>
+
+          {!groupBySubject && (
+            <div className="flex items-center gap-1 mb-2">
+              {getRelatedResourceIcon(file)}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 mb-3">
+            {formatFileSize(file.fileSize)}
+          </p>
+
+          <div className="flex items-center gap-1 w-full">
+            {isPreviewable(file.fileType) && file.fileUrl && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleFilePreview(file)}
+                className="flex-1"
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+            )}
+            {file.fileUrl && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleFileDownload(file.fileUrl!, file.fileName)}
+                className="flex-1"
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            )}
+            {file.fileSource === "local" || !file.fileSource ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleFileDelete(file.id)}
+                disabled={isDeleting === file.id}
+                className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -578,7 +623,7 @@ export function FileManagerContent({
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* 検索 */}
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <Label className="text-sm font-medium mb-2 block">検索</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -627,8 +672,24 @@ export function FileManagerContent({
                   </Select>
                 </div>
 
+                {/* ファイルソースフィルター */}
+                <div className="md:col-span-2">
+                  <Label className="text-sm font-medium mb-2 block">ファイル種別</Label>
+                  <Select value={filterFileSource} onValueChange={setFilterFileSource}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべて</SelectItem>
+                      <SelectItem value="local">手動追加</SelectItem>
+                      <SelectItem value="sakai_assignment">課題添付</SelectItem>
+                      <SelectItem value="sakai_submission">提出済み</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* 科目選択フィルター */}
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <Label className="text-sm font-medium mb-2 block">授業で絞り込み</Label>
                   <Select value={filterSubjectId} onValueChange={setFilterSubjectId}>
                     <SelectTrigger>
@@ -773,6 +834,7 @@ export function FileManagerContent({
                   {searchQuery ||
                   filterType !== "all" ||
                   filterResource !== "all" ||
+                  filterFileSource !== "all" ||
                   filterSubjectId !== "all"
                     ? "検索条件に一致するファイルが見つかりませんでした"
                     : "まだファイルがアップロードされていません"}
