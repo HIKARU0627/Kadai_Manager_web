@@ -10,6 +10,7 @@ import { AddTaskModal } from "@/components/modals/AddTaskModal"
 import { EditTaskModal } from "@/components/modals/EditTaskModal"
 import { TaskDetailModal } from "@/components/modals/TaskDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import SemesterSelector from "@/components/SemesterSelector"
 import { Clock, Paperclip, Plus, Search, Edit, Trash2 } from "lucide-react"
 import { getTasks, updateTask, deleteTask, TaskStatus } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
@@ -50,6 +51,7 @@ export default function TasksPage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<TaskStatus | "all">("not_started")
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -70,8 +72,9 @@ export default function TasksPage() {
         const [tasksResult, subjectsResult] = await Promise.all([
           getTasks(session.user.id, {
             search: searchQuery || undefined,
+            semesterId: selectedSemesterId || undefined,
           }),
-          getSubjects(session.user.id),
+          getSubjects(session.user.id, selectedSemesterId || undefined),
         ])
 
         if (tasksResult.success) {
@@ -88,7 +91,7 @@ export default function TasksPage() {
     }
 
     fetchData()
-  }, [session?.user?.id, searchQuery])
+  }, [session?.user?.id, searchQuery, selectedSemesterId])
 
   // データ再取得の共通関数
   const fetchTasksData = async () => {
@@ -99,8 +102,9 @@ export default function TasksPage() {
       const [tasksResult, subjectsResult] = await Promise.all([
         getTasks(session.user.id, {
           search: searchQuery || undefined,
+          semesterId: selectedSemesterId || undefined,
         }),
-        getSubjects(session.user.id),
+        getSubjects(session.user.id, selectedSemesterId || undefined),
       ])
 
       if (tasksResult.success) {
@@ -241,17 +245,23 @@ export default function TasksPage() {
           </Button>
         </div>
 
-        {/* 検索バー */}
-        <div className="mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="課題名、科目名で検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        {/* 検索バーと学期フィルター */}
+        <div className="mb-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="課題名、科目名で検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+            </div>
+            <SemesterSelector
+              selectedSemesterId={selectedSemesterId}
+              onSemesterChange={setSelectedSemesterId}
             />
-            <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
           </div>
         </div>
 

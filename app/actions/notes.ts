@@ -110,6 +110,7 @@ export async function getNote(id: string) {
 // メモを取得（一覧）
 export async function getNotes(userId: string, filters?: {
   subjectId?: string
+  semesterId?: string
   noteType?: NoteType
   search?: string
 }) {
@@ -118,6 +119,13 @@ export async function getNotes(userId: string, filters?: {
 
     if (filters?.subjectId) {
       where.subjectId = filters.subjectId
+    }
+
+    // Filter by semester through subject relation
+    if (filters?.semesterId) {
+      where.subject = {
+        semesterId: filters.semesterId
+      }
     }
 
     if (filters?.noteType) {
