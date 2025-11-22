@@ -13,27 +13,48 @@ export interface SakaiSite {
   props?: Record<string, any> // Additional properties that might contain schedule info
 }
 
+export interface SakaiSubmission {
+  id: string
+  submitted: boolean
+  userSubmission: boolean
+  graded: boolean
+  returned: boolean
+  status?: string
+  grade?: string
+  dateSubmitted?: string
+  dateSubmittedEpochSeconds?: number
+  submittedAttachments?: Array<{
+    name: string
+    url: string
+    type: string
+  }>
+}
+
 export interface SakaiAssignment {
   id: string
   title: string
   instructions?: string
   dueTimeString?: string
   dueTime?: {
-    time: number
+    epochSecond?: number
+    time?: number
   }
   context?: string // site ID
   entityReference?: string
-  status?: string // Assignment status (e.g., "Submitted", "Graded", "Open", etc.)
+  status?: string // Assignment status (e.g., "DUE", "OPEN", etc.)
   graded?: boolean // Whether the assignment has been graded
   draft?: boolean // Whether submission is in draft
   dropped?: boolean // Whether student has dropped
   userSubmission?: boolean // Whether user has submitted
   closeTime?: {
-    time: number
+    epochSecond?: number
+    time?: number
   }
   openTime?: {
-    time: number
+    epochSecond?: number
+    time?: number
   }
+  submissions?: SakaiSubmission[] // Submission details from site endpoint
 }
 
 export interface SakaiAnnouncement {
@@ -112,15 +133,40 @@ export async function getSites(
 }
 
 /**
- * Get assignments for the authenticated user
+ * Get assignments for a specific site
  */
-export async function getAssignments(
-  cookie: string
+export async function getSiteAssignments(
+  cookie: string,
+  siteId: string
 ): Promise<SakaiAPIResponse<{ assignment_collection: SakaiAssignment[] }>> {
   return fetchSakaiAPI<{ assignment_collection: SakaiAssignment[] }>(
-    "/direct/assignment/my.json?_limit=1000",
+    `/direct/assignment/site/${siteId}.json?_limit=1000`,
     cookie
   )
+}
+
+/**
+ * Get assignments for all sites
+ */
+export async function getAllSiteAssignments(
+  cookie: string,
+  sites: SakaiSite[]
+): Promise<SakaiAPIResponse<SakaiAssignment[]>> {
+  const allAssignments: SakaiAssignment[] = []
+
+  for (const site of sites) {
+    const result = await getSiteAssignments(cookie, site.id)
+    if (result.success && result.data?.assignment_collection) {
+      // Add context (site ID) to each assignment if not present
+      const assignmentsWithContext = result.data.assignment_collection.map(assignment => ({
+        ...assignment,
+        context: assignment.context || site.id
+      }))
+      allAssignments.push(...assignmentsWithContext)
+    }
+  }
+
+  return { success: true, data: allAssignments }
 }
 
 /**

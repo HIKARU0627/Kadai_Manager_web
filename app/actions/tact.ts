@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import {
   getSites,
-  getAssignments,
+  getAllSiteAssignments,
   getAllSiteAnnouncements,
   testConnection,
   parseScheduleFromTitle,
@@ -263,18 +263,35 @@ async function syncAssignments(
 
       // Parse due date
       let dueDate = new Date()
-      if (assignment.dueTime?.time) {
+      if (assignment.dueTime?.epochSecond) {
+        dueDate = new Date(assignment.dueTime.epochSecond * 1000)
+      } else if (assignment.dueTime?.time) {
         dueDate = new Date(assignment.dueTime.time)
       } else if (assignment.dueTimeString) {
         dueDate = new Date(assignment.dueTimeString)
       }
 
-      // Determine if assignment is submitted
-      const isSubmitted =
-        assignment.userSubmission === true ||
-        assignment.graded === true ||
-        assignment.status?.toLowerCase().includes("submitted") ||
-        assignment.status?.toLowerCase().includes("graded")
+      // Determine if assignment is submitted from submissions array
+      let isSubmitted = false
+      let submissionDate: Date | null = null
+
+      if (assignment.submissions && assignment.submissions.length > 0) {
+        // Check the first submission (user's submission)
+        const submission = assignment.submissions[0]
+        isSubmitted = submission.submitted === true || submission.userSubmission === true
+
+        // Get submission date if available
+        if (isSubmitted && submission.dateSubmittedEpochSeconds) {
+          submissionDate = new Date(submission.dateSubmittedEpochSeconds * 1000)
+        }
+      } else {
+        // Fallback to top-level fields if submissions array is not available
+        isSubmitted =
+          assignment.userSubmission === true ||
+          assignment.graded === true ||
+          assignment.status?.toLowerCase().includes("submitted") ||
+          assignment.status?.toLowerCase().includes("graded")
+      }
 
       // Check if past due
       const now = new Date()
@@ -294,7 +311,8 @@ async function syncAssignments(
       if (isSubmitted) {
         // Submitted assignments are marked as completed
         status = "completed"
-        completedAt = new Date() // Sakai doesn't provide exact submission time in /direct/assignment/my.json
+        // Use actual submission date if available
+        completedAt = submissionDate || new Date()
       } else if (isPastDue) {
         // Past due and not submitted are marked as overdue
         status = "overdue"
@@ -446,15 +464,20 @@ export async function syncTactData(userId: string) {
 
     const cookie = user.tactCookie
 
-    // Fetch sites and assignments first
-    const [sitesResult, assignmentsResult] = await Promise.all([
-      getSites(cookie),
-      getAssignments(cookie),
-    ])
+    // Fetch sites first
+    const sitesResult = await getSites(cookie)
 
     if (!sitesResult.success) {
       return { success: false, error: sitesResult.error || "科目データの取得に失敗しました" }
     }
+
+    const sites = sitesResult.data?.site_collection || []
+
+    // Fetch assignments and announcements for all sites in parallel
+    const [assignmentsResult, announcementsResult] = await Promise.all([
+      getAllSiteAssignments(cookie, sites),
+      getAllSiteAnnouncements(cookie, sites),
+    ])
 
     if (!assignmentsResult.success) {
       return {
@@ -463,11 +486,7 @@ export async function syncTactData(userId: string) {
       }
     }
 
-    const sites = sitesResult.data?.site_collection || []
-    const assignments = assignmentsResult.data?.assignment_collection || []
-
-    // Fetch announcements for all sites
-    const announcementsResult = await getAllSiteAnnouncements(cookie, sites)
+    const assignments = assignmentsResult.data || []
 
     if (!announcementsResult.success) {
       return {
