@@ -162,62 +162,71 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[]) 
       }
 
       // Track if schedule was successfully parsed
-      if (scheduleInfo.dayOfWeek !== null && scheduleInfo.period !== null) {
+      if (scheduleInfo.dayOfWeek !== null && scheduleInfo.periods.length > 0) {
         scheduleParsedCount++
-        console.log(`[TACT Sync] Parsed schedule for "${site.title}": Day ${scheduleInfo.dayOfWeek}, Period ${scheduleInfo.period}`)
+        console.log(`[TACT Sync] Parsed schedule for "${site.title}": Day ${scheduleInfo.dayOfWeek}, Periods ${scheduleInfo.periods.join(', ')}`)
       }
 
-      // Check if subject already exists
-      const existing = await prisma.subject.findFirst({
-        where: {
-          userId,
-          sakaiId: site.id,
-        },
-      })
+      // Handle multi-period classes (e.g., 月３限,月４限)
+      const periodsToSync = scheduleInfo.periods.length > 0 ? scheduleInfo.periods : [scheduleInfo.period]
 
-      if (existing) {
-        // Update existing subject
-        // Only update schedule if not manually set (preserve manual changes)
-        const updateData: any = {
-          name: site.title,
-          updatedAt: new Date(),
-        }
+      for (let i = 0; i < periodsToSync.length; i++) {
+        const period = periodsToSync[i]
+        if (period === null) continue
 
-        // Update semester if parsed from title (prioritize parsed semester info)
-        if (subjectSemesterId !== null) {
-          updateData.semesterId = subjectSemesterId
-        }
+        // For multi-period classes, use period suffix for sakaiId to avoid unique constraint
+        const sakaiIdForPeriod = i === 0 ? site.id : `${site.id}-period-${period}`
 
-        // Update schedule info only if existing subject has no schedule set
-        // This preserves manual edits while allowing new schedule data
-        if (existing.dayOfWeek === null && scheduleInfo.dayOfWeek !== null) {
-          updateData.dayOfWeek = scheduleInfo.dayOfWeek
-        }
-        if (existing.period === null && scheduleInfo.period !== null) {
-          updateData.period = scheduleInfo.period
-        }
-        if (existing.type === "other" && scheduleInfo.type === "regular") {
-          updateData.type = scheduleInfo.type
-        }
-
-        await prisma.subject.update({
-          where: { id: existing.id },
-          data: updateData,
-        })
-      } else {
-        // Create new subject with parsed schedule and semester
-        await prisma.subject.create({
-          data: {
+        // Check if subject already exists for this period
+        const existing = await prisma.subject.findFirst({
+          where: {
             userId,
-            sakaiId: site.id,
-            name: site.title,
-            type: scheduleInfo.type,
-            dayOfWeek: scheduleInfo.dayOfWeek,
-            period: scheduleInfo.period,
-            semesterId: subjectSemesterId,
-            color: "#3B82F6", // Default blue color
+            sakaiId: sakaiIdForPeriod,
           },
         })
+
+        if (existing) {
+          // Update existing subject
+          const updateData: any = {
+            name: site.title,
+            updatedAt: new Date(),
+          }
+
+          // Update semester if parsed from title
+          if (subjectSemesterId !== null) {
+            updateData.semesterId = subjectSemesterId
+          }
+
+          // Update schedule info only if existing subject has no schedule set
+          if (existing.dayOfWeek === null && scheduleInfo.dayOfWeek !== null) {
+            updateData.dayOfWeek = scheduleInfo.dayOfWeek
+          }
+          if (existing.period === null && period !== null) {
+            updateData.period = period
+          }
+          if (existing.type === "other" && scheduleInfo.type === "regular") {
+            updateData.type = scheduleInfo.type
+          }
+
+          await prisma.subject.update({
+            where: { id: existing.id },
+            data: updateData,
+          })
+        } else {
+          // Create new subject for this period
+          await prisma.subject.create({
+            data: {
+              userId,
+              sakaiId: sakaiIdForPeriod,
+              name: site.title,
+              type: scheduleInfo.type,
+              dayOfWeek: scheduleInfo.dayOfWeek,
+              period: period,
+              semesterId: subjectSemesterId,
+              color: "#3B82F6", // Default blue color
+            },
+          })
+        }
       }
       syncedCount++
     } catch (error) {

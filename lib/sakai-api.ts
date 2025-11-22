@@ -199,6 +199,7 @@ export async function testConnection(cookie: string): Promise<SakaiAPIResponse<b
 export interface ScheduleInfo {
   dayOfWeek: number | null // 1=月, 2=火, 3=水, 4=木, 5=金, 6=土, 0=日
   period: number | null
+  periods: number[] // All periods for multi-period classes (e.g., [3, 4] for 月３限,月４限)
   type: "regular" | "other" // regular if schedule found, other if not
   year: number | null // Academic year (e.g., 2025, 2024)
   semesterName: string | null // Semester name (e.g., "春1期", "秋2期")
@@ -233,37 +234,48 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
   }
 
   // Primary pattern: "(2025年度秋１期/水１限)" or "(2024年度春/火５限)"
-  // Also handles multiple periods: "(2025年度秋１期/月３限,月４限)" - takes first period
+  // Also handles multiple periods: "(2025年度秋１期/月３限,月４限)"
   const schedulePattern = /[（(][^/]*\/([月火水木金土日])([０-９0-9]+)限/
+
+  // Map day character to day number
+  const dayMap: { [key: string]: number } = {
+    月: 1,
+    火: 2,
+    水: 3,
+    木: 4,
+    金: 5,
+    土: 6,
+    日: 0,
+  }
 
   const match = text.match(schedulePattern)
   if (match) {
     const dayChar = match[1]
-    const periodStr = match[2]
-
-    // Convert full-width numbers to half-width
-    const normalizedPeriod = periodStr.replace(/[０-９]/g, (ch) =>
-      String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
-    )
-    const period = parseInt(normalizedPeriod, 10)
-
-    // Map day character to day number
-    const dayMap: { [key: string]: number } = {
-      月: 1,
-      火: 2,
-      水: 3,
-      木: 4,
-      金: 5,
-      土: 6,
-      日: 0,
-    }
-
     const dayOfWeek = dayMap[dayChar]
 
-    if (dayOfWeek !== undefined && !isNaN(period) && period >= 1 && period <= 10) {
+    // Extract all periods for multi-period classes (e.g., "月３限,月４限")
+    // Pattern to find all period numbers after the day of week
+    const multiPeriodPattern = new RegExp(`${dayChar}([０-９0-9]+)限`, 'g')
+    const periods: number[] = []
+    let periodMatch
+
+    while ((periodMatch = multiPeriodPattern.exec(text)) !== null) {
+      const periodStr = periodMatch[1]
+      // Convert full-width numbers to half-width
+      const normalizedPeriod = periodStr.replace(/[０-９]/g, (ch) =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+      )
+      const period = parseInt(normalizedPeriod, 10)
+      if (!isNaN(period) && period >= 1 && period <= 10) {
+        periods.push(period)
+      }
+    }
+
+    if (dayOfWeek !== undefined && periods.length > 0) {
       return {
         dayOfWeek,
-        period,
+        period: periods[0], // First period for backward compatibility
+        periods,
         type: "regular",
         year,
         semesterName,
@@ -295,6 +307,7 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
         return {
           dayOfWeek: day,
           period,
+          periods: [period],
           type: "regular",
           year,
           semesterName,
@@ -308,6 +321,7 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
     return {
       dayOfWeek: null,
       period: null,
+      periods: [],
       type: "other",
       year,
       semesterName,
@@ -318,6 +332,7 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
   return {
     dayOfWeek: null,
     period: null,
+    periods: [],
     type: "other",
     year: null,
     semesterName: null,
