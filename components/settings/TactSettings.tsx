@@ -37,6 +37,11 @@ export function TactSettings({ userId }: TactSettingsProps) {
     tasks: number
     announcements: number
     errors: number
+    totalFetched?: {
+      subjects: number
+      tasks: number
+      announcements: number
+    }
   } | null>(null)
 
   // Load cookie status on mount
@@ -202,24 +207,52 @@ export function TactSettings({ userId }: TactSettingsProps) {
             <CheckCircle2 className="w-5 h-5 mr-2" />
             同期結果
           </h4>
-          <div className="space-y-2 text-sm text-blue-800">
-            <div className="flex justify-between">
-              <span>科目:</span>
-              <span className="font-semibold">{syncResult.subjects}件</span>
-            </div>
-            <div className="flex justify-between">
-              <span>課題:</span>
-              <span className="font-semibold">{syncResult.tasks}件</span>
-            </div>
-            <div className="flex justify-between">
-              <span>お知らせ:</span>
-              <span className="font-semibold">{syncResult.announcements}件</span>
+          <div className="space-y-3 text-sm text-blue-800">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>科目:</span>
+                <span className="font-semibold">
+                  {syncResult.subjects}件
+                  {syncResult.totalFetched && (
+                    <span className="text-xs ml-2 text-blue-600">
+                      （取得: {syncResult.totalFetched.subjects}件）
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>課題:</span>
+                <span className="font-semibold">
+                  {syncResult.tasks}件
+                  {syncResult.totalFetched && (
+                    <span className="text-xs ml-2 text-blue-600">
+                      （取得: {syncResult.totalFetched.tasks}件）
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>お知らせ:</span>
+                <span className="font-semibold">
+                  {syncResult.announcements}件
+                  {syncResult.totalFetched && (
+                    <span className="text-xs ml-2 text-blue-600">
+                      （取得: {syncResult.totalFetched.announcements}件）
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
             {syncResult.errors > 0 && (
-              <div className="flex justify-between text-red-600">
+              <div className="flex justify-between text-red-600 pt-2 border-t border-blue-200">
                 <span>エラー:</span>
                 <span className="font-semibold">{syncResult.errors}件</span>
               </div>
+            )}
+            {syncResult.totalFetched && (
+              <p className="text-xs text-blue-600 pt-2 border-t border-blue-200">
+                ※ 「同期」は新規作成または更新した件数、「取得」はAPIから取得した件数です
+              </p>
             )}
           </div>
         </div>

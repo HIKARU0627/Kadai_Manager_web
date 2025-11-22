@@ -85,7 +85,18 @@ async function fetchSakaiAPI<T>(
 export async function getSites(
   cookie: string
 ): Promise<SakaiAPIResponse<{ site_collection: SakaiSite[] }>> {
-  return fetchSakaiAPI<{ site_collection: SakaiSite[] }>("/direct/site.json", cookie)
+  // Try to get user's sites with no limit
+  const result = await fetchSakaiAPI<{ site_collection: SakaiSite[] }>(
+    "/direct/site/user.json?_limit=1000",
+    cookie
+  )
+
+  // If that fails, fall back to the default endpoint
+  if (!result.success || !result.data?.site_collection) {
+    return fetchSakaiAPI<{ site_collection: SakaiSite[] }>("/direct/site.json?_limit=1000", cookie)
+  }
+
+  return result
 }
 
 /**

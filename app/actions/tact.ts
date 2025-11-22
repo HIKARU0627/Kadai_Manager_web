@@ -378,9 +378,16 @@ export async function syncTactData(userId: string) {
     const assignments = assignmentsResult.data?.assignment_collection || []
     const announcements = announcementsResult.data?.announcement_collection || []
 
+    // Log fetched data counts for debugging
+    console.log(`[TACT Sync] Fetched from API - Sites: ${sites.length}, Assignments: ${assignments.length}, Announcements: ${announcements.length}`)
+
     const subjectsResult = await syncSubjects(userId, cookie, sites)
     const assignmentsSync = await syncAssignments(userId, cookie, assignments)
     const announcementsSync = await syncAnnouncements(userId, cookie, announcements)
+
+    // Log sync results
+    console.log(`[TACT Sync] Synced - Subjects: ${subjectsResult.syncedCount}/${sites.length}, Tasks: ${assignmentsSync.syncedCount}/${assignments.length}, Announcements: ${announcementsSync.syncedCount}/${announcements.length}`)
+    console.log(`[TACT Sync] Errors - Subjects: ${subjectsResult.errorCount}, Tasks: ${assignmentsSync.errorCount}, Announcements: ${announcementsSync.errorCount}`)
 
     // Update last sync time
     await prisma.user.update({
@@ -403,6 +410,11 @@ export async function syncTactData(userId: string) {
           subjectsResult.errorCount +
           assignmentsSync.errorCount +
           announcementsSync.errorCount,
+        totalFetched: {
+          subjects: sites.length,
+          tasks: assignments.length,
+          announcements: announcements.length,
+        },
       },
     }
   } catch (error) {
