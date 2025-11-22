@@ -1,137 +1,67 @@
-# イベントタイプカスタマイズ機能 - マイグレーションガイド
+# データベースマイグレーション手順
 
-## 概要
+## 課題添付ファイル機能を有効にするために必要な手順
 
-このアップデートにより、カレンダーの予定の種類をカスタマイズできるようになりました。デフォルトで「予定」と「テスト」が用意されており、これらは削除できません。
-
-## データベースマイグレーション
-
-### 1. Prismaスキーマの変更
-
-新しいテーブル `EventTypeConfig` が追加されました。以下のコマンドでデータベースを更新してください：
+### 方法1: Prisma Migrateを使用（推奨）
 
 ```bash
-# 開発環境の場合
-npm run db:push
+# Prismaクライアントを生成
+npx prisma generate
 
-# または、マイグレーションを作成する場合
-npx prisma migrate dev --name add_event_type_config
+# マイグレーションを適用
+npx prisma db push
 ```
 
-### 2. Prismaクライアントの再生成
-
-スキーマ変更後、Prismaクライアントを再生成します：
+### 方法2: マイグレーションスクリプトを使用
 
 ```bash
-npm run db:generate
+# 依存関係をインストール（必要な場合）
+npm install
+
+# マイグレーションスクリプトを実行
+node scripts/migrate.js
 ```
 
-## 新機能
+### 方法3: 手動でSQLを実行
 
-### 1. イベントタイプ管理
+もし上記の方法が動作しない場合、データベースに直接SQLを実行してください:
 
-設定画面（`/settings`）に新しいタブ「予定の種類」が追加されました：
-- イベントタイプの追加・削除
-- 各タイプの名前、色、科目必須フラグの設定
-- 「予定」と「テスト」はデフォルト項目として保護されています
+```sql
+-- filesテーブルに新しいカラムを追加
+ALTER TABLE files ADD COLUMN sakaiRef TEXT;
+ALTER TABLE files ADD COLUMN sakaiUrl TEXT;
+ALTER TABLE files ADD COLUMN fileSource TEXT DEFAULT 'local';
+```
 
-### 2. 予定作成・編集の強化
+## 確認方法
 
-予定作成・編集モーダルが動的にイベントタイプに対応：
-- カスタムイベントタイプが選択肢に表示されます
-- 科目必須フラグに基づいて科目選択フィールドが表示/非表示されます
-- 各タイプに設定した色がプレビューに表示されます
+マイグレーション後、以下を実行してカラムが追加されたことを確認してください:
 
-### 3. カレンダーページの完全対応
+```bash
+npx prisma studio
+```
 
-カレンダーページがカスタムイベントタイプに完全対応：
-- **色の表示**: カスタムイベントタイプの色が正しく表示されます
-- **バッジ表示**: イベントタイプ名が動的に表示されます
-- **凡例**: 課題とすべてのカスタムイベントタイプが自動的に表示されます
-- **月間統計**: 各イベントタイプの件数が動的に集計されます
-
-## デフォルトデータ
-
-ユーザーが初めてイベントタイプ機能を使用すると、以下のデフォルトタイプが自動的に作成されます：
-
-| ID | 名前 | 色 | 科目必須 | 削除可能 |
-|----|------|-----|----------|----------|
-| {userId}_event | 予定 | #10B981 (緑) | いいえ | いいえ |
-| {userId}_test | テスト | #8B5CF6 (紫) | はい | いいえ |
-
-## 互換性
-
-### 既存データ
-
-既存のイベントデータは影響を受けません。`eventType` フィールドは引き続き文字列として保存されます。
-
-### 注意事項
-
-- ✅ カレンダーページは完全に対応済みです
-- ✅ 色の表示、バッジ、凡例、統計がすべて動的に動作します
-- 既存の「予定」と「テスト」のデータは自動的に新しいシステムと互換性を持ちます
+Prisma Studioで`files`テーブルを開き、以下のカラムが存在することを確認:
+- `sakaiRef`
+- `sakaiUrl`
+- `fileSource`
 
 ## トラブルシューティング
 
-### マイグレーションエラー
+### エラー: "Cannot find module '@prisma/client'"
 
+```bash
+npm install @prisma/client
+npx prisma generate
 ```
-Error: Failed to fetch the engine file
-```
 
-このエラーが発生した場合：
+### エラー: "duplicate column name"
 
-1. オフライン環境の場合、環境変数を設定：
-   ```bash
-   export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-   ```
+このエラーは、カラムが既に存在することを意味します。問題ありません。
 
-2. 再度マイグレーションを実行：
-   ```bash
-   npm run db:push
-   ```
+## 次のステップ
 
-### イベントタイプが表示されない
-
-設定画面でイベントタイプが表示されない場合：
-
-1. ブラウザのコンソールでエラーを確認
-2. データベースに `event_type_configs` テーブルが作成されているか確認
-3. ページをリロードして再試行
-
-## 開発者向け情報
-
-### 新しいファイル
-
-- `prisma/schema.prisma` - EventTypeConfigモデル追加
-- `app/actions/eventTypes.ts` - イベントタイプ管理用Server Actions
-- `components/settings/EventTypeSettings.tsx` - イベントタイプ管理UI
-- `MIGRATION_GUIDE.md` - このファイル
-
-### 変更されたファイル
-
-- `components/settings/SettingsForm.tsx` - 新しいタブ追加
-- `components/modals/AddEventModal.tsx` - 動的イベントタイプ対応
-- `components/modals/EditEventModal.tsx` - 動的イベントタイプ対応
-- `app/calendar/page.tsx` - カスタムイベントタイプの完全対応
-
-### API
-
-イベントタイプ管理のServer Actions：
-
-```typescript
-// イベントタイプ一覧を取得
-getUserEventTypes(): Promise<EventTypeConfig[]>
-
-// イベントタイプを作成
-createEventType(data: { name: string; color: string; requiresSubject: boolean })
-
-// イベントタイプを更新（デフォルト項目は不可）
-updateEventType(id: string, data: { name?: string; color?: string; requiresSubject?: boolean })
-
-// イベントタイプを削除（デフォルト項目は不可）
-deleteEventType(id: string)
-
-// イベントタイプの順序を更新
-reorderEventTypes(eventTypeIds: string[])
-```
+マイグレーション完了後:
+1. アプリケーションを再起動
+2. TACTとデータを同期（設定ページから）
+3. ファイル管理ページで添付ファイルが表示されることを確認

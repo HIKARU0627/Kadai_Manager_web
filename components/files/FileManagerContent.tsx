@@ -125,6 +125,17 @@ export function FileManagerContent({
   const filteredAndSortedFiles = useMemo(() => {
     let result = [...files]
 
+    // デバッグ: 初期ファイル数を確認
+    console.log('[FileManager] Total files:', files.length)
+    console.log('[FileManager] Files with fileSource:', files.filter(f => f.fileSource).length)
+    console.log('[FileManager] Filter settings:', {
+      searchQuery,
+      filterType,
+      filterResource,
+      filterFileSource,
+      filterSubjectId
+    })
+
     // 検索フィルター
     if (searchQuery) {
       result = result.filter((file) =>
@@ -199,6 +210,9 @@ export function FileManagerContent({
 
       return sortOrder === "asc" ? comparison : -comparison
     })
+
+    // デバッグ: フィルタリング後のファイル数を確認
+    console.log('[FileManager] Filtered files:', result.length)
 
     return result
   }, [files, searchQuery, filterType, filterResource, filterFileSource, filterSubjectId, sortField, sortOrder, selectedSemesterId, filteredSubjects])
