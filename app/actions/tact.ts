@@ -11,6 +11,7 @@ import {
   type SakaiAnnouncement,
 } from "@/lib/sakai-api"
 import { revalidatePath } from "next/cache"
+import { getOrCreateCurrentSemester } from "./semesters"
 
 /**
  * Convert HTML to plain text
@@ -133,7 +134,7 @@ export async function deleteTactCookie(userId: string) {
 /**
  * Sync subjects from TACT
  */
-async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[]) {
+async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], semesterId: string | null) {
   let syncedCount = 0
   let errorCount = 0
 
@@ -154,6 +155,7 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[]) 
           data: {
             name: site.title,
             type: "other", // TACT courses are typically "other" type
+            semesterId: semesterId || existing.semesterId, // 現在の学期に割り当て（既に学期がある場合は保持）
             updatedAt: new Date(),
           },
         })
@@ -165,6 +167,7 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[]) 
             sakaiId: site.id,
             name: site.title,
             type: "other",
+            semesterId: semesterId, // 現在の学期に割り当て
             color: "#3B82F6", // Default blue color
           },
         })
@@ -420,7 +423,15 @@ export async function syncTactData(userId: string) {
     // Log fetched data counts for debugging
     console.log(`[TACT Sync] Fetched from API - Sites: ${sites.length}, Assignments: ${assignments.length}, Announcements: ${announcements.length}`)
 
-    const subjectsResult = await syncSubjects(userId, cookie, sites)
+    // Get or create current semester
+    const semesterResult = await getOrCreateCurrentSemester(userId)
+    const semesterId = semesterResult.success && semesterResult.data ? semesterResult.data.id : null
+
+    if (semesterId) {
+      console.log(`[TACT Sync] Using semester: ${semesterResult.data?.year} ${semesterResult.data?.name}`)
+    }
+
+    const subjectsResult = await syncSubjects(userId, cookie, sites, semesterId)
     const assignmentsSync = await syncAssignments(userId, cookie, assignments)
     const announcementsSync = await syncAnnouncements(userId, cookie, announcements)
 
