@@ -124,7 +124,50 @@ export async function getAssignments(
 }
 
 /**
- * Get announcements for the authenticated user
+ * Get announcements for a specific site
+ */
+export async function getSiteAnnouncements(
+  cookie: string,
+  siteId: string
+): Promise<SakaiAPIResponse<{ announcement_collection: SakaiAnnouncement[] }>> {
+  return fetchSakaiAPI<{ announcement_collection: SakaiAnnouncement[] }>(
+    `/direct/announcement/site/${siteId}.json?_limit=1000`,
+    cookie
+  )
+}
+
+/**
+ * Get announcements for all sites
+ * This fetches announcements for each site individually
+ */
+export async function getAllSiteAnnouncements(
+  cookie: string,
+  sites: SakaiSite[]
+): Promise<SakaiAPIResponse<SakaiAnnouncement[]>> {
+  try {
+    const allAnnouncements: SakaiAnnouncement[] = []
+
+    for (const site of sites) {
+      const result = await getSiteAnnouncements(cookie, site.id)
+      if (result.success && result.data?.announcement_collection) {
+        // Add siteId to each announcement for reference
+        const announcementsWithSite = result.data.announcement_collection.map(ann => ({
+          ...ann,
+          siteId: site.id
+        }))
+        allAnnouncements.push(...announcementsWithSite)
+      }
+    }
+
+    return { success: true, data: allAnnouncements }
+  } catch (error) {
+    console.error("Failed to get all site announcements:", error)
+    return { success: false, error: "お知らせの取得に失敗しました" }
+  }
+}
+
+/**
+ * Get announcements for the authenticated user (deprecated - use getAllSiteAnnouncements instead)
  */
 export async function getAnnouncements(
   cookie: string

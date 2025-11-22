@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import {
   getSites,
   getAssignments,
-  getAnnouncements,
+  getAllSiteAnnouncements,
   testConnection,
   parseScheduleFromTitle,
   type SakaiSite,
@@ -437,11 +437,10 @@ export async function syncTactData(userId: string) {
 
     const cookie = user.tactCookie
 
-    // Fetch data from TACT
-    const [sitesResult, assignmentsResult, announcementsResult] = await Promise.all([
+    // Fetch sites and assignments first
+    const [sitesResult, assignmentsResult] = await Promise.all([
       getSites(cookie),
       getAssignments(cookie),
-      getAnnouncements(cookie),
     ])
 
     if (!sitesResult.success) {
@@ -455,6 +454,12 @@ export async function syncTactData(userId: string) {
       }
     }
 
+    const sites = sitesResult.data?.site_collection || []
+    const assignments = assignmentsResult.data?.assignment_collection || []
+
+    // Fetch announcements for all sites
+    const announcementsResult = await getAllSiteAnnouncements(cookie, sites)
+
     if (!announcementsResult.success) {
       return {
         success: false,
@@ -462,10 +467,7 @@ export async function syncTactData(userId: string) {
       }
     }
 
-    // Sync data
-    const sites = sitesResult.data?.site_collection || []
-    const assignments = assignmentsResult.data?.assignment_collection || []
-    const announcements = announcementsResult.data?.announcement_collection || []
+    const announcements = announcementsResult.data || []
 
     // Log fetched data counts for debugging
     console.log(`[TACT Sync] Fetched from API - Sites: ${sites.length}, Assignments: ${assignments.length}, Announcements: ${announcements.length}`)
