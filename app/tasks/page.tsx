@@ -69,7 +69,6 @@ export default function TasksPage() {
       try {
         const [tasksResult, subjectsResult] = await Promise.all([
           getTasks(session.user.id, {
-            status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
             search: searchQuery || undefined,
           }),
           getSubjects(session.user.id),
@@ -89,7 +88,7 @@ export default function TasksPage() {
     }
 
     fetchData()
-  }, [session?.user?.id, activeTab, searchQuery])
+  }, [session?.user?.id, searchQuery])
 
   // データ再取得の共通関数
   const fetchTasksData = async () => {
@@ -99,7 +98,6 @@ export default function TasksPage() {
     try {
       const [tasksResult, subjectsResult] = await Promise.all([
         getTasks(session.user.id, {
-          status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
           search: searchQuery || undefined,
         }),
         getSubjects(session.user.id),
@@ -202,6 +200,11 @@ export default function TasksPage() {
     return tasks.filter((t) => t.status === status).length
   }
 
+  // 表示する課題をフィルタリング
+  const filteredTasks = activeTab === "all"
+    ? tasks
+    : tasks.filter((t) => t.status === activeTab)
+
   const tabs = [
     { id: "not_started" as const, label: "未着手" },
     { id: "in_progress" as const, label: "作業中" },
@@ -285,9 +288,9 @@ export default function TasksPage() {
           <div className="text-center py-12">
             <p className="text-gray-500">読み込み中...</p>
           </div>
-        ) : tasks.length > 0 ? (
+        ) : filteredTasks.length > 0 ? (
           <div className="space-y-4">
-            {tasks.map((task) => {
+            {filteredTasks.map((task) => {
               const priority =
                 priorityLabels[task.priority as keyof typeof priorityLabels]
               const isUrgent = task.priority === 2
