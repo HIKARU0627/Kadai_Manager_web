@@ -235,7 +235,8 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
 
   // Primary pattern: "(2025年度秋１期/水１限)" or "(2024年度春/火５限)"
   // Also handles multiple periods: "(2025年度秋１期/月３限,月４限)"
-  const schedulePattern = /[（(][^/]*\/([月火水木金土日])([０-９0-9]+)限/
+  // Extract the schedule part after the slash
+  const schedulePartMatch = text.match(/[（(][^/]*\/([^)）]+)[)）]/)
 
   // Map day character to day number
   const dayMap: { [key: string]: number } = {
@@ -248,37 +249,48 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
     日: 0,
   }
 
-  const match = text.match(schedulePattern)
-  if (match) {
-    const dayChar = match[1]
-    const dayOfWeek = dayMap[dayChar]
+  if (schedulePartMatch) {
+    const schedulePart = schedulePartMatch[1] // e.g., "月３限,月４限" or "水１限"
 
-    // Extract all periods for multi-period classes (e.g., "月３限,月４限")
-    // Pattern to find all period numbers after the day of week
-    const multiPeriodPattern = new RegExp(`${dayChar}([０-９0-9]+)限`, 'g')
-    const periods: number[] = []
-    let periodMatch
+    // Find the day of week
+    let dayOfWeek: number | null = null
+    let dayChar: string | null = null
 
-    while ((periodMatch = multiPeriodPattern.exec(text)) !== null) {
-      const periodStr = periodMatch[1]
-      // Convert full-width numbers to half-width
-      const normalizedPeriod = periodStr.replace(/[０-９]/g, (ch) =>
-        String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
-      )
-      const period = parseInt(normalizedPeriod, 10)
-      if (!isNaN(period) && period >= 1 && period <= 10) {
-        periods.push(period)
+    for (const [char, num] of Object.entries(dayMap)) {
+      if (schedulePart.includes(char)) {
+        dayOfWeek = num
+        dayChar = char
+        break
       }
     }
 
-    if (dayOfWeek !== undefined && periods.length > 0) {
-      return {
-        dayOfWeek,
-        period: periods[0], // First period for backward compatibility
-        periods,
-        type: "regular",
-        year,
-        semesterName,
+    if (dayChar !== null && dayOfWeek !== null) {
+      // Extract all periods for this day (e.g., "月３限,月４限" -> [3, 4])
+      const multiPeriodPattern = new RegExp(`${dayChar}([０-９0-9]+)限`, 'g')
+      const periods: number[] = []
+      let periodMatch
+
+      while ((periodMatch = multiPeriodPattern.exec(schedulePart)) !== null) {
+        const periodStr = periodMatch[1]
+        // Convert full-width numbers to half-width
+        const normalizedPeriod = periodStr.replace(/[０-９]/g, (ch) =>
+          String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+        )
+        const period = parseInt(normalizedPeriod, 10)
+        if (!isNaN(period) && period >= 1 && period <= 10) {
+          periods.push(period)
+        }
+      }
+
+      if (periods.length > 0) {
+        return {
+          dayOfWeek,
+          period: periods[0], // First period for backward compatibility
+          periods,
+          type: "regular",
+          year,
+          semesterName,
+        }
       }
     }
   }
