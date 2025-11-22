@@ -278,7 +278,12 @@ async function syncAssignments(
       if (assignment.submissions && assignment.submissions.length > 0) {
         // Check the first submission (user's submission)
         const submission = assignment.submissions[0]
-        isSubmitted = submission.submitted === true || submission.userSubmission === true
+        // Only consider as submitted if user actually submitted electronically
+        // and there is a valid submission date
+        isSubmitted =
+          submission.userSubmission === true &&
+          submission.dateSubmittedEpochSeconds !== undefined &&
+          submission.dateSubmittedEpochSeconds > 0
 
         // Get submission date if available
         if (isSubmitted && submission.dateSubmittedEpochSeconds) {
