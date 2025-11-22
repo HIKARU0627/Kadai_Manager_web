@@ -239,6 +239,84 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[]) 
 }
 
 /**
+ * Sync file attachments for a task
+ */
+async function syncTaskAttachments(
+  userId: string,
+  taskId: string,
+  assignmentAttachments: any[] = [],
+  submittedAttachments: any[] = []
+) {
+  try {
+    // Get existing files for this task from Sakai
+    const existingFiles = await prisma.file.findMany({
+      where: {
+        userId,
+        taskId,
+        fileSource: {
+          in: ["sakai_assignment", "sakai_submission"],
+        },
+      },
+    })
+
+    const existingRefs = new Set(existingFiles.map((f) => f.sakaiRef))
+    const currentRefs = new Set<string>()
+
+    // Sync assignment attachments (instructor-provided files)
+    for (const attachment of assignmentAttachments || []) {
+      if (!attachment.ref || !attachment.url) continue
+      currentRefs.add(attachment.ref)
+
+      if (!existingRefs.has(attachment.ref)) {
+        await prisma.file.create({
+          data: {
+            userId,
+            taskId,
+            fileName: attachment.name || "添付ファイル",
+            fileUrl: attachment.url,
+            sakaiUrl: attachment.url,
+            sakaiRef: attachment.ref,
+            fileType: attachment.type || null,
+            fileSize: attachment.size || null,
+            fileSource: "sakai_assignment",
+          },
+        })
+      }
+    }
+
+    // Sync submitted attachments (student-submitted files)
+    for (const attachment of submittedAttachments || []) {
+      if (!attachment.ref || !attachment.url) continue
+      currentRefs.add(attachment.ref)
+
+      if (!existingRefs.has(attachment.ref)) {
+        await prisma.file.create({
+          data: {
+            userId,
+            taskId,
+            fileName: attachment.name || "提出ファイル",
+            fileUrl: attachment.url,
+            sakaiUrl: attachment.url,
+            sakaiRef: attachment.ref,
+            fileType: attachment.type || null,
+            fileSize: attachment.size || null,
+            fileSource: "sakai_submission",
+          },
+        })
+      }
+    }
+
+    // Delete files that no longer exist in Sakai
+    const filesToDelete = existingFiles.filter((f) => f.sakaiRef && !currentRefs.has(f.sakaiRef))
+    for (const file of filesToDelete) {
+      await prisma.file.delete({ where: { id: file.id } })
+    }
+  } catch (error) {
+    console.error(`Error syncing attachments for task ${taskId}:`, error)
+  }
+}
+
+/**
  * Sync assignments (tasks) from TACT
  */
 async function syncAssignments(
@@ -326,6 +404,8 @@ async function syncAssignments(
       // Convert HTML to plain text
       const plainDescription = htmlToPlainText(assignment.instructions)
 
+      let taskId: string
+
       if (existing) {
         // Update existing task
         const updateData: any = {
@@ -353,9 +433,11 @@ async function syncAssignments(
           where: { id: existing.id },
           data: updateData,
         })
+
+        taskId = existing.id
       } else {
         // Create new task
-        await prisma.task.create({
+        const newTask = await prisma.task.create({
           data: {
             userId,
             sakaiId: assignment.id,
@@ -368,7 +450,23 @@ async function syncAssignments(
             completedAt,
           },
         })
+
+        taskId = newTask.id
       }
+
+      // Sync attachments
+      const submittedAttachments =
+        assignment.submissions && assignment.submissions.length > 0
+          ? assignment.submissions[0].submittedAttachments || []
+          : []
+
+      await syncTaskAttachments(
+        userId,
+        taskId,
+        assignment.attachments || [],
+        submittedAttachments
+      )
+
       syncedCount++
     } catch (error) {
       console.error(`Error syncing assignment ${assignment.id}:`, error)

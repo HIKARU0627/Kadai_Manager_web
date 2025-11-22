@@ -136,6 +136,9 @@ model File {
   fileUrl   String?
   fileType  String?
   fileSize  Int?
+  sakaiRef  String?  // Sakai file reference for synced files
+  sakaiUrl  String?  // Original Sakai URL for direct access
+  fileSource String? @default("local") // local, sakai_assignment, sakai_submission
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

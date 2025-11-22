@@ -37,6 +37,7 @@ interface FileItem {
   fileUrl: string | null
   fileType: string | null
   fileSize: number | null
+  fileSource: string | null
   createdAt: Date
 }
 
@@ -196,62 +197,85 @@ export function TaskDetailModal({
               <p className="text-sm text-gray-500">読み込み中...</p>
             ) : files.length > 0 ? (
               <div className="space-y-2">
-                {files.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                  >
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      <FileIcon className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">
-                          {file.fileName}
-                        </p>
-                        <div className="flex items-center space-x-2 text-xs text-gray-500">
-                          <span>{formatFileSize(file.fileSize)}</span>
-                          <span>•</span>
-                          <span>
-                            {format(new Date(file.createdAt), "yyyy/MM/dd", { locale: ja })}
-                          </span>
+                {files.map((file) => {
+                  const getFileSourceLabel = (source: string | null) => {
+                    switch (source) {
+                      case "sakai_assignment":
+                        return { label: "課題添付", color: "bg-blue-100 text-blue-700" }
+                      case "sakai_submission":
+                        return { label: "提出済み", color: "bg-green-100 text-green-700" }
+                      case "local":
+                      default:
+                        return { label: "手動追加", color: "bg-gray-100 text-gray-700" }
+                    }
+                  }
+
+                  const sourceInfo = getFileSourceLabel(file.fileSource)
+
+                  return (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <FileIcon className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium text-gray-800 truncate">
+                              {file.fileName}
+                            </p>
+                            <Badge className={`text-xs ${sourceInfo.color}`}>
+                              {sourceInfo.label}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center space-x-2 text-xs text-gray-500">
+                            <span>{formatFileSize(file.fileSize)}</span>
+                            <span>•</span>
+                            <span>
+                              {format(new Date(file.createdAt), "yyyy/MM/dd", { locale: ja })}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center space-x-1">
+                        {file.fileUrl && (file.fileType?.startsWith("image/") || file.fileType === "application/pdf") && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleFilePreview(file)}
+                            className="h-8 w-8 text-gray-400 hover:text-purple-600"
+                            title="プレビュー"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {file.fileUrl && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleFileDownload(file.fileUrl!, file.fileName)}
+                            className="h-8 w-8 text-gray-400 hover:text-blue-600"
+                            title="ダウンロード"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {file.fileSource === "local" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleFileDelete(file.id)}
+                            disabled={isDeleting === file.id}
+                            className="h-8 w-8 text-gray-400 hover:text-red-600"
+                            title="削除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      {file.fileUrl && (file.fileType?.startsWith("image/") || file.fileType === "application/pdf") && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleFilePreview(file)}
-                          className="h-8 w-8 text-gray-400 hover:text-purple-600"
-                          title="プレビュー"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {file.fileUrl && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleFileDownload(file.fileUrl!, file.fileName)}
-                          className="h-8 w-8 text-gray-400 hover:text-blue-600"
-                          title="ダウンロード"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleFileDelete(file.id)}
-                        disabled={isDeleting === file.id}
-                        className="h-8 w-8 text-gray-400 hover:text-red-600"
-                        title="削除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-gray-500">添付ファイルはありません</p>
