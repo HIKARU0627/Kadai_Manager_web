@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-export type TaskStatus = "not_started" | "in_progress" | "completed"
+export type TaskStatus = "not_started" | "in_progress" | "completed" | "overdue"
 export type TaskType = "assignment" | "quiz"
 
 export interface CreateTaskInput {

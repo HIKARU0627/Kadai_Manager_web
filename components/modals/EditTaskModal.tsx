@@ -109,7 +109,7 @@ export function EditTaskModal({
         subjectId: formData.subjectId === "none" ? undefined : formData.subjectId,
         dueDate: new Date(formData.dueDate),
         priority: parseInt(formData.priority),
-        status: formData.status as "not_started" | "in_progress" | "completed",
+        status: formData.status as "not_started" | "in_progress" | "completed" | "overdue",
         taskType: formData.taskType,
       })
 
@@ -250,6 +250,7 @@ export function EditTaskModal({
                   <SelectItem value="not_started">未着手</SelectItem>
                   <SelectItem value="in_progress">作業中</SelectItem>
                   <SelectItem value="completed">完了</SelectItem>
+                  <SelectItem value="overdue">時間切れ</SelectItem>
                 </SelectContent>
               </Select>
             </div>

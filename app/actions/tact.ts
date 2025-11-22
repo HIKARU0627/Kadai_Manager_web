@@ -189,7 +189,6 @@ async function syncAssignments(
 ) {
   let syncedCount = 0
   let errorCount = 0
-  let skippedCount = 0
 
   for (const assignment of assignments) {
     try {
@@ -218,7 +217,7 @@ async function syncAssignments(
         assignment.status?.toLowerCase().includes("submitted") ||
         assignment.status?.toLowerCase().includes("graded")
 
-      // Skip assignments that are past due and not submitted (unless already in DB)
+      // Check if past due
       const now = new Date()
       const isPastDue = dueDate < now
 
@@ -229,19 +228,17 @@ async function syncAssignments(
         },
       })
 
-      // Skip if: past due, not submitted, and not already in database
-      if (isPastDue && !isSubmitted && !existing) {
-        skippedCount++
-        continue
-      }
-
       // Determine status
       let status = "not_started"
       let completedAt: Date | null = null
 
       if (isSubmitted) {
+        // Submitted assignments are marked as completed
         status = "completed"
         completedAt = new Date() // Sakai doesn't provide exact submission time in /direct/assignment/my.json
+      } else if (isPastDue) {
+        // Past due and not submitted are marked as overdue
+        status = "overdue"
       }
 
       // Convert HTML to plain text
@@ -249,7 +246,6 @@ async function syncAssignments(
 
       if (existing) {
         // Update existing task
-        // Only update status to completed if it's submitted, don't revert completed tasks
         const updateData: any = {
           title: assignment.title,
           description: plainDescription || null,
@@ -258,10 +254,17 @@ async function syncAssignments(
           updatedAt: new Date(),
         }
 
-        // Update status if submitted (don't override manually set statuses for already submitted)
+        // Update status based on submission state and deadline
+        // Don't override manually completed tasks
         if (isSubmitted && existing.status !== "completed") {
           updateData.status = "completed"
           updateData.completedAt = completedAt
+        } else if (!isSubmitted && isPastDue && existing.status !== "completed") {
+          // Mark as overdue if not submitted and past due (unless already manually completed)
+          updateData.status = "overdue"
+        } else if (!isSubmitted && !isPastDue && existing.status === "overdue") {
+          // If deadline was extended and no longer past due, reset to not_started
+          updateData.status = "not_started"
         }
 
         await prisma.task.update({
@@ -291,9 +294,7 @@ async function syncAssignments(
     }
   }
 
-  console.log(`[TACT Sync] Assignments - Skipped ${skippedCount} past-due unsubmitted assignments`)
-
-  return { syncedCount, errorCount, skippedCount }
+  return { syncedCount, errorCount }
 }
 
 /**
@@ -444,7 +445,6 @@ export async function syncTactData(userId: string) {
         subjects: subjectsResult.syncedCount,
         tasks: assignmentsSync.syncedCount,
         announcements: announcementsSync.syncedCount,
-        skippedTasks: assignmentsSync.skippedCount || 0,
         errors:
           subjectsResult.errorCount +
           assignmentsSync.errorCount +
