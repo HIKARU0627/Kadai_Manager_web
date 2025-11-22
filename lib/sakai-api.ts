@@ -118,7 +118,7 @@ export async function getAssignments(
   cookie: string
 ): Promise<SakaiAPIResponse<{ assignment_collection: SakaiAssignment[] }>> {
   return fetchSakaiAPI<{ assignment_collection: SakaiAssignment[] }>(
-    "/direct/assignment/my.json",
+    "/direct/assignment/my.json?_limit=1000",
     cookie
   )
 }
@@ -130,7 +130,7 @@ export async function getAnnouncements(
   cookie: string
 ): Promise<SakaiAPIResponse<{ announcement_collection: SakaiAnnouncement[] }>> {
   return fetchSakaiAPI<{ announcement_collection: SakaiAnnouncement[] }>(
-    "/direct/announcement/user.json",
+    "/direct/announcement/user.json?_limit=1000",
     cookie
   )
 }
