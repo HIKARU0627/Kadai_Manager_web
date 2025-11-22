@@ -10,6 +10,7 @@ import { AddTaskModal } from "@/components/modals/AddTaskModal"
 import { EditTaskModal } from "@/components/modals/EditTaskModal"
 import { TaskDetailModal } from "@/components/modals/TaskDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import SemesterSelector from "@/components/SemesterSelector"
 import { Clock, Paperclip, Plus, Search, Edit, Trash2 } from "lucide-react"
 import { getTasks, updateTask, deleteTask, TaskStatus } from "@/app/actions/tasks"
 import { getSubjects } from "@/app/actions/subjects"
@@ -26,6 +27,7 @@ const statusLabels = {
   not_started: "未着手",
   in_progress: "作業中",
   completed: "完了",
+  overdue: "時間切れ",
 }
 
 type Task = {
@@ -49,6 +51,7 @@ export default function TasksPage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<TaskStatus | "all">("not_started")
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -68,10 +71,10 @@ export default function TasksPage() {
       try {
         const [tasksResult, subjectsResult] = await Promise.all([
           getTasks(session.user.id, {
-            status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
             search: searchQuery || undefined,
+            semesterId: selectedSemesterId || undefined,
           }),
-          getSubjects(session.user.id),
+          getSubjects(session.user.id, selectedSemesterId || undefined),
         ])
 
         if (tasksResult.success) {
@@ -88,7 +91,7 @@ export default function TasksPage() {
     }
 
     fetchData()
-  }, [session?.user?.id, activeTab, searchQuery])
+  }, [session?.user?.id, searchQuery, selectedSemesterId])
 
   // データ再取得の共通関数
   const fetchTasksData = async () => {
@@ -98,10 +101,10 @@ export default function TasksPage() {
     try {
       const [tasksResult, subjectsResult] = await Promise.all([
         getTasks(session.user.id, {
-          status: activeTab !== "all" ? (activeTab as TaskStatus) : undefined,
           search: searchQuery || undefined,
+          semesterId: selectedSemesterId || undefined,
         }),
-        getSubjects(session.user.id),
+        getSubjects(session.user.id, selectedSemesterId || undefined),
       ])
 
       if (tasksResult.success) {
@@ -201,10 +204,16 @@ export default function TasksPage() {
     return tasks.filter((t) => t.status === status).length
   }
 
+  // 表示する課題をフィルタリング
+  const filteredTasks = activeTab === "all"
+    ? tasks
+    : tasks.filter((t) => t.status === activeTab)
+
   const tabs = [
     { id: "not_started" as const, label: "未着手" },
     { id: "in_progress" as const, label: "作業中" },
     { id: "completed" as const, label: "完了" },
+    { id: "overdue" as const, label: "時間切れ" },
     { id: "all" as const, label: "すべて" },
   ]
 
@@ -236,17 +245,23 @@ export default function TasksPage() {
           </Button>
         </div>
 
-        {/* 検索バー */}
-        <div className="mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="課題名、科目名で検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        {/* 検索バーと学期フィルター */}
+        <div className="mb-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="課題名、科目名で検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+            </div>
+            <SemesterSelector
+              selectedSemesterId={selectedSemesterId}
+              onSemesterChange={setSelectedSemesterId}
             />
-            <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
           </div>
         </div>
 
@@ -283,9 +298,9 @@ export default function TasksPage() {
           <div className="text-center py-12">
             <p className="text-gray-500">読み込み中...</p>
           </div>
-        ) : tasks.length > 0 ? (
+        ) : filteredTasks.length > 0 ? (
           <div className="space-y-4">
-            {tasks.map((task) => {
+            {filteredTasks.map((task) => {
               const priority =
                 priorityLabels[task.priority as keyof typeof priorityLabels]
               const isUrgent = task.priority === 2
@@ -367,6 +382,7 @@ export default function TasksPage() {
                         <option value="not_started">未着手</option>
                         <option value="in_progress">作業中</option>
                         <option value="completed">完了</option>
+                        <option value="overdue">時間切れ</option>
                       </select>
                       <div className="flex space-x-1">
                         <Button

@@ -10,6 +10,7 @@ import { AddNoteModal } from "@/components/modals/AddNoteModal"
 import { EditNoteModal } from "@/components/modals/EditNoteModal"
 import { NoteDetailModal } from "@/components/modals/NoteDetailModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import SemesterSelector from "@/components/SemesterSelector"
 import { Plus, Search, FileText, AlertCircle, Calendar, Edit, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
@@ -47,6 +48,7 @@ export default function NotesPage() {
   const { data: session } = useSession()
   const [selectedSubject, setSelectedSubject] = useState("すべて")
   const [selectedNoteType, setSelectedNoteType] = useState("all")
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -65,8 +67,10 @@ export default function NotesPage() {
 
       setIsLoading(true)
       const [notesResult, subjectsResult] = await Promise.all([
-        getNotes(session.user.id, {}),
-        getSubjects(session.user.id),
+        getNotes(session.user.id, {
+          semesterId: selectedSemesterId || undefined,
+        }),
+        getSubjects(session.user.id, selectedSemesterId || undefined),
       ])
 
       if (notesResult.success) {
@@ -81,7 +85,7 @@ export default function NotesPage() {
     }
 
     fetchData()
-  }, [session?.user?.id])
+  }, [session?.user?.id, selectedSemesterId])
 
   // フィルタリングされたノート
   const filteredNotes = notes.filter((note) => {
@@ -132,8 +136,10 @@ export default function NotesPage() {
 
     setIsLoading(true)
     const [notesResult, subjectsResult] = await Promise.all([
-      getNotes(session.user.id, {}),
-      getSubjects(session.user.id),
+      getNotes(session.user.id, {
+        semesterId: selectedSemesterId || undefined,
+      }),
+      getSubjects(session.user.id, selectedSemesterId || undefined),
     ])
 
     if (notesResult.success) {
@@ -225,6 +231,19 @@ export default function NotesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* フィルターサイドバー */}
           <div className="lg:col-span-1 space-y-4">
+            {/* 学期フィルター */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">学期</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SemesterSelector
+                  selectedSemesterId={selectedSemesterId}
+                  onSemesterChange={setSelectedSemesterId}
+                />
+              </CardContent>
+            </Card>
+
             {/* 科目フィルター */}
             <Card>
               <CardHeader>
@@ -363,14 +382,14 @@ export default function NotesPage() {
                       </div>
 
                       <h3
-                        className="text-xl font-semibold text-gray-800 mb-2 cursor-pointer hover:text-blue-600 transition"
+                        className="text-xl font-semibold text-gray-800 mb-2 cursor-pointer hover:text-blue-600 transition line-clamp-1"
                         onClick={() => handleViewDetail(note)}
                       >
                         {note.title || "無題"}
                       </h3>
 
                       <p
-                        className="text-gray-600 mb-3 cursor-pointer hover:text-gray-800 transition"
+                        className="text-gray-600 mb-3 cursor-pointer hover:text-gray-800 transition line-clamp-3"
                         onClick={() => handleViewDetail(note)}
                       >
                         {note.content}

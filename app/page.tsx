@@ -18,6 +18,7 @@ const statusLabels = {
   not_started: "未着手",
   in_progress: "作業中",
   completed: "完了",
+  overdue: "時間切れ",
 }
 
 export default async function DashboardPage() {

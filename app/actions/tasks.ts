@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-export type TaskStatus = "not_started" | "in_progress" | "completed"
+export type TaskStatus = "not_started" | "in_progress" | "completed" | "overdue"
 export type TaskType = "assignment" | "quiz"
 
 export interface CreateTaskInput {
@@ -135,6 +135,7 @@ export async function getTask(id: string) {
 export async function getTasks(userId: string, filters?: {
   status?: TaskStatus
   subjectId?: string
+  semesterId?: string
   search?: string
 }) {
   try {
@@ -146,6 +147,13 @@ export async function getTasks(userId: string, filters?: {
 
     if (filters?.subjectId) {
       where.subjectId = filters.subjectId
+    }
+
+    // Filter by semester through subject relation
+    if (filters?.semesterId) {
+      where.subject = {
+        semesterId: filters.semesterId
+      }
     }
 
     if (filters?.search) {
