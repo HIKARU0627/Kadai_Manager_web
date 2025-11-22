@@ -53,6 +53,11 @@ interface FileItem {
   task?: {
     id: string
     title: string
+    subject?: {
+      id: string
+      name: string
+      semesterId: string | null
+    } | null
   } | null
   note?: {
     id: string
@@ -133,7 +138,8 @@ export function FileManagerContent({
       filterType,
       filterResource,
       filterFileSource,
-      filterSubjectId
+      filterSubjectId,
+      selectedSemesterId
     })
 
     // 検索フィルター
@@ -179,14 +185,22 @@ export function FileManagerContent({
       })
     }
 
-    // 学期フィルター（科目に関連付けられているファイルのみ）
+    // 学期フィルター
     if (selectedSemesterId) {
-      const filteredSubjectIds = new Set(filteredSubjects.map((s) => s.id))
       result = result.filter((file) => {
-        // 科目に関連付けられていないファイルは除外
-        if (!file.subjectId) return false
-        // 選択された学期の科目に関連付けられているファイルのみ表示
-        return filteredSubjectIds.has(file.subjectId)
+        // 科目に直接関連付けられている場合
+        if (file.subjectId && file.subject) {
+          // 選択された学期の科目リストに含まれているか確認
+          return filteredSubjects.some((s) => s.id === file.subjectId)
+        }
+
+        // 課題を通じて科目に関連付けられている場合
+        if (file.taskId && file.task?.subject) {
+          return file.task.subject.semesterId === selectedSemesterId
+        }
+
+        // メモやその他のファイルは学期フィルターの対象外
+        return false
       })
     }
 
