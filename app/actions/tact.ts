@@ -6,6 +6,7 @@ import {
   getAssignments,
   getAnnouncements,
   testConnection,
+  parseScheduleFromTitle,
   type SakaiSite,
   type SakaiAssignment,
   type SakaiAnnouncement,
@@ -137,9 +138,19 @@ export async function deleteTactCookie(userId: string) {
 async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], semesterId: string | null) {
   let syncedCount = 0
   let errorCount = 0
+  let scheduleParsedCount = 0
 
   for (const site of sites) {
     try {
+      // Parse schedule information from title and description
+      const scheduleInfo = parseScheduleFromTitle(site.title, site.description)
+
+      // Track if schedule was successfully parsed
+      if (scheduleInfo.dayOfWeek !== null && scheduleInfo.period !== null) {
+        scheduleParsedCount++
+        console.log(`[TACT Sync] Parsed schedule for "${site.title}": Day ${scheduleInfo.dayOfWeek}, Period ${scheduleInfo.period}`)
+      }
+
       // Check if subject already exists
       const existing = await prisma.subject.findFirst({
         where: {
@@ -150,23 +161,39 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], 
 
       if (existing) {
         // Update existing subject
+        // Only update schedule if not manually set (preserve manual changes)
+        const updateData: any = {
+          name: site.title,
+          semesterId: semesterId || existing.semesterId, // 現在の学期に割り当て（既に学期がある場合は保持）
+          updatedAt: new Date(),
+        }
+
+        // Update schedule info only if existing subject has no schedule set
+        // This preserves manual edits while allowing new schedule data
+        if (existing.dayOfWeek === null && scheduleInfo.dayOfWeek !== null) {
+          updateData.dayOfWeek = scheduleInfo.dayOfWeek
+        }
+        if (existing.period === null && scheduleInfo.period !== null) {
+          updateData.period = scheduleInfo.period
+        }
+        if (existing.type === "other" && scheduleInfo.type === "regular") {
+          updateData.type = scheduleInfo.type
+        }
+
         await prisma.subject.update({
           where: { id: existing.id },
-          data: {
-            name: site.title,
-            type: "other", // TACT courses are typically "other" type
-            semesterId: semesterId || existing.semesterId, // 現在の学期に割り当て（既に学期がある場合は保持）
-            updatedAt: new Date(),
-          },
+          data: updateData,
         })
       } else {
-        // Create new subject
+        // Create new subject with parsed schedule
         await prisma.subject.create({
           data: {
             userId,
             sakaiId: site.id,
             name: site.title,
-            type: "other",
+            type: scheduleInfo.type,
+            dayOfWeek: scheduleInfo.dayOfWeek,
+            period: scheduleInfo.period,
             semesterId: semesterId, // 現在の学期に割り当て
             color: "#3B82F6", // Default blue color
           },
@@ -179,7 +206,7 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], 
     }
   }
 
-  return { syncedCount, errorCount }
+  return { syncedCount, errorCount, scheduleParsedCount }
 }
 
 /**
@@ -437,6 +464,7 @@ export async function syncTactData(userId: string) {
 
     // Log sync results
     console.log(`[TACT Sync] Synced - Subjects: ${subjectsResult.syncedCount}/${sites.length}, Tasks: ${assignmentsSync.syncedCount}/${assignments.length}, Announcements: ${announcementsSync.syncedCount}/${announcements.length}`)
+    console.log(`[TACT Sync] Schedule parsed - ${subjectsResult.scheduleParsedCount} subjects added to timetable`)
     console.log(`[TACT Sync] Errors - Subjects: ${subjectsResult.errorCount}, Tasks: ${assignmentsSync.errorCount}, Announcements: ${announcementsSync.errorCount}`)
 
     // Update last sync time
@@ -456,6 +484,7 @@ export async function syncTactData(userId: string) {
         subjects: subjectsResult.syncedCount,
         tasks: assignmentsSync.syncedCount,
         announcements: announcementsSync.syncedCount,
+        scheduleParsed: subjectsResult.scheduleParsedCount,
         errors:
           subjectsResult.errorCount +
           assignmentsSync.errorCount +

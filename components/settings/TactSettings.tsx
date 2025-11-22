@@ -36,6 +36,7 @@ export function TactSettings({ userId }: TactSettingsProps) {
     subjects: number
     tasks: number
     announcements: number
+    scheduleParsed?: number
     errors: number
     totalFetched?: {
       subjects: number
@@ -251,11 +252,21 @@ export function TactSettings({ userId }: TactSettingsProps) {
                 </div>
               </div>
             )}
+            {syncResult.scheduleParsed !== undefined && syncResult.scheduleParsed > 0 && (
+              <div className="pt-2 border-t border-blue-200">
+                <div className="flex justify-between text-green-700">
+                  <span>時間割に追加:</span>
+                  <span className="font-semibold">{syncResult.scheduleParsed}件</span>
+                </div>
+              </div>
+            )}
             {syncResult.totalFetched && (
               <p className="text-xs text-blue-600 pt-2 border-t border-blue-200">
                 ※ 「同期」は新規作成または更新した件数、「取得」はAPIから取得した件数です
                 <br />
                 提出済み課題は「完了」、締め切り過ぎの未提出課題は「時間切れ」に分類されます
+                <br />
+                授業名に曜日・時限の情報があれば自動的に時間割に追加されます（例: 数学A (月1)）
               </p>
             )}
           </div>

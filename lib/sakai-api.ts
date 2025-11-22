@@ -10,6 +10,7 @@ export interface SakaiSite {
   title: string
   description?: string
   entityReference?: string
+  props?: Record<string, any> // Additional properties that might contain schedule info
 }
 
 export interface SakaiAssignment {
@@ -143,4 +144,69 @@ export async function testConnection(cookie: string): Promise<SakaiAPIResponse<b
     return { success: true, data: true }
   }
   return { success: false, error: result.error }
+}
+
+/**
+ * Parse schedule information from course title or description
+ * Japanese universities often include schedule in format like:
+ * - "数学A (月1)" → Monday, Period 1
+ * - "物理学 月曜1限" → Monday, Period 1
+ * - "化学 (火2-3)" → Tuesday, Period 2 (for double periods, take first)
+ */
+export interface ScheduleInfo {
+  dayOfWeek: number | null // 1=月, 2=火, 3=水, 4=木, 5=金, 6=土, 0=日
+  period: number | null
+  type: "regular" | "other" // regular if schedule found, other if not
+}
+
+export function parseScheduleFromTitle(title: string, description?: string): ScheduleInfo {
+  const text = `${title} ${description || ""}`
+
+  // Day of week patterns
+  const dayPatterns = [
+    { pattern: /[（(]?月[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 1 }, // 月曜
+    { pattern: /[（(]?火[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 2 }, // 火曜
+    { pattern: /[（(]?水[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 3 }, // 水曜
+    { pattern: /[（(]?木[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 4 }, // 木曜
+    { pattern: /[（(]?金[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 5 }, // 金曜
+    { pattern: /[（(]?土[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 6 }, // 土曜
+    { pattern: /[（(]?日[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 0 }, // 日曜
+  ]
+
+  for (const { pattern, day } of dayPatterns) {
+    const match = text.match(pattern)
+    if (match && match[1]) {
+      const period = parseInt(match[1], 10)
+      if (!isNaN(period) && period >= 1 && period <= 10) {
+        return {
+          dayOfWeek: day,
+          period,
+          type: "regular",
+        }
+      }
+    }
+  }
+
+  // Try alternate patterns without day name but with 限 (period)
+  // e.g., "(1限)" or "1限目"
+  const periodOnlyMatch = text.match(/[（(]?(\d+)限[目)）]?/)
+  if (periodOnlyMatch && periodOnlyMatch[1]) {
+    const period = parseInt(periodOnlyMatch[1], 10)
+    if (!isNaN(period) && period >= 1 && period <= 10) {
+      // Period found but no day - might be useful for manual assignment
+      // For now, mark as "other" type since we need both day and period
+      return {
+        dayOfWeek: null,
+        period: period,
+        type: "other",
+      }
+    }
+  }
+
+  // No schedule information found
+  return {
+    dayOfWeek: null,
+    period: null,
+    type: "other",
+  }
 }
