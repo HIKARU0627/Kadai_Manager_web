@@ -162,43 +162,69 @@ export interface ScheduleInfo {
 export function parseScheduleFromTitle(title: string, description?: string): ScheduleInfo {
   const text = `${title} ${description || ""}`
 
-  // Day of week patterns
-  const dayPatterns = [
-    { pattern: /[（(]?月[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 1 }, // 月曜
-    { pattern: /[（(]?火[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 2 }, // 火曜
-    { pattern: /[（(]?水[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 3 }, // 水曜
-    { pattern: /[（(]?木[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 4 }, // 木曜
-    { pattern: /[（(]?金[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 5 }, // 金曜
-    { pattern: /[（(]?土[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 6 }, // 土曜
-    { pattern: /[（(]?日[曜)）]?[・\s]*(\d+)[限\-)）]?/i, day: 0 }, // 日曜
+  // Primary pattern: "(2025年度秋１期/水１限)" or "(2024年度春/火５限)"
+  // Also handles multiple periods: "(2025年度秋１期/月３限,月４限)" - takes first period
+  const mainPattern = /[（(][^/]*\/([月火水木金土日])([０-９0-9]+)限/
+
+  const match = text.match(mainPattern)
+  if (match) {
+    const dayChar = match[1]
+    const periodStr = match[2]
+
+    // Convert full-width numbers to half-width
+    const normalizedPeriod = periodStr.replace(/[０-９]/g, (ch) =>
+      String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+    )
+    const period = parseInt(normalizedPeriod, 10)
+
+    // Map day character to day number
+    const dayMap: { [key: string]: number } = {
+      月: 1,
+      火: 2,
+      水: 3,
+      木: 4,
+      金: 5,
+      土: 6,
+      日: 0,
+    }
+
+    const dayOfWeek = dayMap[dayChar]
+
+    if (dayOfWeek !== undefined && !isNaN(period) && period >= 1 && period <= 10) {
+      return {
+        dayOfWeek,
+        period,
+        type: "regular",
+      }
+    }
+  }
+
+  // Fallback: Try simpler patterns like "月1" or "月曜1限"
+  const fallbackPatterns = [
+    { pattern: /[（(]?月[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 1 },
+    { pattern: /[（(]?火[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 2 },
+    { pattern: /[（(]?水[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 3 },
+    { pattern: /[（(]?木[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 4 },
+    { pattern: /[（(]?金[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 5 },
+    { pattern: /[（(]?土[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 6 },
+    { pattern: /[（(]?日[曜)）]?[・\s]*([０-９0-9]+)[限\-)）]?/i, day: 0 },
   ]
 
-  for (const { pattern, day } of dayPatterns) {
-    const match = text.match(pattern)
-    if (match && match[1]) {
-      const period = parseInt(match[1], 10)
+  for (const { pattern, day } of fallbackPatterns) {
+    const fallbackMatch = text.match(pattern)
+    if (fallbackMatch && fallbackMatch[1]) {
+      // Convert full-width numbers to half-width
+      const normalizedPeriod = fallbackMatch[1].replace(/[０-９]/g, (ch) =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+      )
+      const period = parseInt(normalizedPeriod, 10)
+
       if (!isNaN(period) && period >= 1 && period <= 10) {
         return {
           dayOfWeek: day,
           period,
           type: "regular",
         }
-      }
-    }
-  }
-
-  // Try alternate patterns without day name but with 限 (period)
-  // e.g., "(1限)" or "1限目"
-  const periodOnlyMatch = text.match(/[（(]?(\d+)限[目)）]?/)
-  if (periodOnlyMatch && periodOnlyMatch[1]) {
-    const period = parseInt(periodOnlyMatch[1], 10)
-    if (!isNaN(period) && period >= 1 && period <= 10) {
-      // Period found but no day - might be useful for manual assignment
-      // For now, mark as "other" type since we need both day and period
-      return {
-        dayOfWeek: null,
-        period: period,
-        type: "other",
       }
     }
   }
