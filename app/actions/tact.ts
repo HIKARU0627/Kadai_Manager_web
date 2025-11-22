@@ -12,7 +12,7 @@ import {
   type SakaiAnnouncement,
 } from "@/lib/sakai-api"
 import { revalidatePath } from "next/cache"
-import { getOrCreateCurrentSemester } from "./semesters"
+import { getOrCreateCurrentSemester, getOrCreateSemester } from "./semesters"
 
 /**
  * Convert HTML to plain text
@@ -135,15 +135,31 @@ export async function deleteTactCookie(userId: string) {
 /**
  * Sync subjects from TACT
  */
-async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], semesterId: string | null) {
+async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[]) {
   let syncedCount = 0
   let errorCount = 0
   let scheduleParsedCount = 0
 
   for (const site of sites) {
     try {
-      // Parse schedule information from title and description
+      // Parse schedule and semester information from title and description
       const scheduleInfo = parseScheduleFromTitle(site.title, site.description)
+
+      // Get or create the appropriate semester for this subject
+      let subjectSemesterId: string | null = null
+
+      if (scheduleInfo.year !== null && scheduleInfo.semesterName !== null) {
+        const semesterResult = await getOrCreateSemester(
+          userId,
+          scheduleInfo.year,
+          scheduleInfo.semesterName
+        )
+
+        if (semesterResult.success && semesterResult.data) {
+          subjectSemesterId = semesterResult.data.id
+          console.log(`[TACT Sync] Subject "${site.title}" assigned to ${scheduleInfo.year}年度 ${scheduleInfo.semesterName}`)
+        }
+      }
 
       // Track if schedule was successfully parsed
       if (scheduleInfo.dayOfWeek !== null && scheduleInfo.period !== null) {
@@ -164,8 +180,12 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], 
         // Only update schedule if not manually set (preserve manual changes)
         const updateData: any = {
           name: site.title,
-          semesterId: semesterId || existing.semesterId, // 現在の学期に割り当て（既に学期がある場合は保持）
           updatedAt: new Date(),
+        }
+
+        // Update semester if parsed from title (prioritize parsed semester info)
+        if (subjectSemesterId !== null) {
+          updateData.semesterId = subjectSemesterId
         }
 
         // Update schedule info only if existing subject has no schedule set
@@ -185,7 +205,7 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], 
           data: updateData,
         })
       } else {
-        // Create new subject with parsed schedule
+        // Create new subject with parsed schedule and semester
         await prisma.subject.create({
           data: {
             userId,
@@ -194,7 +214,7 @@ async function syncSubjects(userId: string, cookie: string, sites: SakaiSite[], 
             type: scheduleInfo.type,
             dayOfWeek: scheduleInfo.dayOfWeek,
             period: scheduleInfo.period,
-            semesterId: semesterId, // 現在の学期に割り当て
+            semesterId: subjectSemesterId,
             color: "#3B82F6", // Default blue color
           },
         })
@@ -450,15 +470,8 @@ export async function syncTactData(userId: string) {
     // Log fetched data counts for debugging
     console.log(`[TACT Sync] Fetched from API - Sites: ${sites.length}, Assignments: ${assignments.length}, Announcements: ${announcements.length}`)
 
-    // Get or create current semester
-    const semesterResult = await getOrCreateCurrentSemester(userId)
-    const semesterId = semesterResult.success && semesterResult.data ? semesterResult.data.id : null
-
-    if (semesterId) {
-      console.log(`[TACT Sync] Using semester: ${semesterResult.data?.year} ${semesterResult.data?.name}`)
-    }
-
-    const subjectsResult = await syncSubjects(userId, cookie, sites, semesterId)
+    // Sync subjects (semester will be determined from each subject's title)
+    const subjectsResult = await syncSubjects(userId, cookie, sites)
     const assignmentsSync = await syncAssignments(userId, cookie, assignments)
     const announcementsSync = await syncAnnouncements(userId, cookie, announcements)
 

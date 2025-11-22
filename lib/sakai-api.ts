@@ -157,16 +157,43 @@ export interface ScheduleInfo {
   dayOfWeek: number | null // 1=月, 2=火, 3=水, 4=木, 5=金, 6=土, 0=日
   period: number | null
   type: "regular" | "other" // regular if schedule found, other if not
+  year: number | null // Academic year (e.g., 2025, 2024)
+  semesterName: string | null // Semester name (e.g., "春1期", "秋2期")
 }
 
 export function parseScheduleFromTitle(title: string, description?: string): ScheduleInfo {
   const text = `${title} ${description || ""}`
 
+  // Extract academic year and semester: "(2025年度秋１期/水１限)" or "(2024年度春/火５限)"
+  const yearSemesterPattern = /[（(](\d{4})年度(春|秋)([１２1２]期)?/
+  const yearSemesterMatch = text.match(yearSemesterPattern)
+
+  let year: number | null = null
+  let semesterName: string | null = null
+
+  if (yearSemesterMatch) {
+    year = parseInt(yearSemesterMatch[1], 10)
+    const season = yearSemesterMatch[2] // "春" or "秋"
+    const quarterStr = yearSemesterMatch[3] // "１期" or "２期" or undefined
+
+    // Normalize quarter - convert full-width to half-width
+    let quarter = "1期" // Default to first quarter if not specified
+    if (quarterStr) {
+      quarter = quarterStr.replace(/[１２]/g, (ch) => {
+        if (ch === "１") return "1"
+        if (ch === "２") return "2"
+        return ch
+      })
+    }
+
+    semesterName = `${season}${quarter}`
+  }
+
   // Primary pattern: "(2025年度秋１期/水１限)" or "(2024年度春/火５限)"
   // Also handles multiple periods: "(2025年度秋１期/月３限,月４限)" - takes first period
-  const mainPattern = /[（(][^/]*\/([月火水木金土日])([０-９0-9]+)限/
+  const schedulePattern = /[（(][^/]*\/([月火水木金土日])([０-９0-9]+)限/
 
-  const match = text.match(mainPattern)
+  const match = text.match(schedulePattern)
   if (match) {
     const dayChar = match[1]
     const periodStr = match[2]
@@ -195,6 +222,8 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
         dayOfWeek,
         period,
         type: "regular",
+        year,
+        semesterName,
       }
     }
   }
@@ -224,15 +253,30 @@ export function parseScheduleFromTitle(title: string, description?: string): Sch
           dayOfWeek: day,
           period,
           type: "regular",
+          year,
+          semesterName,
         }
       }
     }
   }
 
-  // No schedule information found
+  // If semester info was found but no schedule, still return semester info
+  if (year !== null && semesterName !== null) {
+    return {
+      dayOfWeek: null,
+      period: null,
+      type: "other",
+      year,
+      semesterName,
+    }
+  }
+
+  // No schedule or semester information found
   return {
     dayOfWeek: null,
     period: null,
     type: "other",
+    year: null,
+    semesterName: null,
   }
 }

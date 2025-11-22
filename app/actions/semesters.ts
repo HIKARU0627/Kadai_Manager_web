@@ -281,6 +281,74 @@ function getCurrentSemesterInfo(date: Date = new Date()): {
 }
 
 /**
+ * 指定された年度と学期名の学期を取得または作成
+ */
+export async function getOrCreateSemester(
+  userId: string,
+  year: number,
+  semesterName: string
+) {
+  try {
+    // 該当する学期が既に存在するか確認
+    let semester = await prisma.semester.findFirst({
+      where: {
+        userId,
+        year,
+        name: semesterName,
+      },
+    });
+
+    // 存在しない場合は作成
+    if (!semester) {
+      // Determine start and end dates based on semester name
+      let startDate: Date
+      let endDate: Date
+
+      if (semesterName === '春1期') {
+        startDate = new Date(year, 3, 1) // 4月1日
+        endDate = new Date(year, 5, 0) // 5月末日
+      } else if (semesterName === '春2期') {
+        startDate = new Date(year, 5, 1) // 6月1日
+        endDate = new Date(year, 7, 0) // 7月末日
+      } else if (semesterName === '秋1期') {
+        startDate = new Date(year, 9, 1) // 10月1日
+        endDate = new Date(year, 11, 0) // 11月末日
+      } else if (semesterName === '秋2期') {
+        startDate = new Date(year, 11, 1) // 12月1日
+        endDate = new Date(year + 1, 1, 0) // 1月末日
+      } else {
+        // Unknown semester format, use default dates
+        startDate = new Date(year, 3, 1)
+        endDate = new Date(year + 1, 2, 31)
+      }
+
+      // Check if this should be the active semester (current date falls within it)
+      const now = new Date()
+      const isActive = now >= startDate && now <= endDate
+
+      semester = await prisma.semester.create({
+        data: {
+          userId,
+          year,
+          name: semesterName,
+          startDate,
+          endDate,
+          isActive,
+        },
+      });
+
+      revalidatePath('/settings');
+      revalidatePath('/subjects');
+    }
+
+    return { success: true, data: semester };
+  } catch (error) {
+    console.error('Get or create semester error:', error);
+    return { success: false, error: '学期の取得または作成に失敗しました' };
+  }
+}
+
+/**
  * 現在の学期を取得または作成（自動判定）
  */
 export async function getOrCreateCurrentSemester(userId: string) {
