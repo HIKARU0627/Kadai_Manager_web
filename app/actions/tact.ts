@@ -189,6 +189,7 @@ async function syncAssignments(
 ) {
   let syncedCount = 0
   let errorCount = 0
+  let skippedCount = 0
 
   for (const assignment of assignments) {
     try {
@@ -210,10 +211,17 @@ async function syncAssignments(
         dueDate = new Date(assignment.dueTimeString)
       }
 
-      // Convert HTML to plain text
-      const plainDescription = htmlToPlainText(assignment.instructions)
+      // Determine if assignment is submitted
+      const isSubmitted =
+        assignment.userSubmission === true ||
+        assignment.graded === true ||
+        assignment.status?.toLowerCase().includes("submitted") ||
+        assignment.status?.toLowerCase().includes("graded")
 
-      // Check if task already exists
+      // Skip assignments that are past due and not submitted (unless already in DB)
+      const now = new Date()
+      const isPastDue = dueDate < now
+
       const existing = await prisma.task.findFirst({
         where: {
           userId,
@@ -221,17 +229,44 @@ async function syncAssignments(
         },
       })
 
+      // Skip if: past due, not submitted, and not already in database
+      if (isPastDue && !isSubmitted && !existing) {
+        skippedCount++
+        continue
+      }
+
+      // Determine status
+      let status = "not_started"
+      let completedAt: Date | null = null
+
+      if (isSubmitted) {
+        status = "completed"
+        completedAt = new Date() // Sakai doesn't provide exact submission time in /direct/assignment/my.json
+      }
+
+      // Convert HTML to plain text
+      const plainDescription = htmlToPlainText(assignment.instructions)
+
       if (existing) {
         // Update existing task
+        // Only update status to completed if it's submitted, don't revert completed tasks
+        const updateData: any = {
+          title: assignment.title,
+          description: plainDescription || null,
+          dueDate,
+          subjectId: subject?.id || null,
+          updatedAt: new Date(),
+        }
+
+        // Update status if submitted (don't override manually set statuses for already submitted)
+        if (isSubmitted && existing.status !== "completed") {
+          updateData.status = "completed"
+          updateData.completedAt = completedAt
+        }
+
         await prisma.task.update({
           where: { id: existing.id },
-          data: {
-            title: assignment.title,
-            description: plainDescription || null,
-            dueDate,
-            subjectId: subject?.id || null,
-            updatedAt: new Date(),
-          },
+          data: updateData,
         })
       } else {
         // Create new task
@@ -244,7 +279,8 @@ async function syncAssignments(
             dueDate,
             subjectId: subject?.id || null,
             taskType: "assignment",
-            status: "not_started",
+            status,
+            completedAt,
           },
         })
       }
@@ -255,7 +291,9 @@ async function syncAssignments(
     }
   }
 
-  return { syncedCount, errorCount }
+  console.log(`[TACT Sync] Assignments - Skipped ${skippedCount} past-due unsubmitted assignments`)
+
+  return { syncedCount, errorCount, skippedCount }
 }
 
 /**
@@ -406,6 +444,7 @@ export async function syncTactData(userId: string) {
         subjects: subjectsResult.syncedCount,
         tasks: assignmentsSync.syncedCount,
         announcements: announcementsSync.syncedCount,
+        skippedTasks: assignmentsSync.skippedCount || 0,
         errors:
           subjectsResult.errorCount +
           assignmentsSync.errorCount +

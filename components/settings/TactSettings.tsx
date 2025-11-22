@@ -36,6 +36,7 @@ export function TactSettings({ userId }: TactSettingsProps) {
     subjects: number
     tasks: number
     announcements: number
+    skippedTasks?: number
     errors: number
     totalFetched?: {
       subjects: number
@@ -243,15 +244,27 @@ export function TactSettings({ userId }: TactSettingsProps) {
                 </span>
               </div>
             </div>
-            {syncResult.errors > 0 && (
-              <div className="flex justify-between text-red-600 pt-2 border-t border-blue-200">
-                <span>エラー:</span>
-                <span className="font-semibold">{syncResult.errors}件</span>
+            {(syncResult.errors > 0 || (syncResult.skippedTasks && syncResult.skippedTasks > 0)) && (
+              <div className="pt-2 border-t border-blue-200 space-y-1">
+                {syncResult.errors > 0 && (
+                  <div className="flex justify-between text-red-600">
+                    <span>エラー:</span>
+                    <span className="font-semibold">{syncResult.errors}件</span>
+                  </div>
+                )}
+                {syncResult.skippedTasks && syncResult.skippedTasks > 0 && (
+                  <div className="flex justify-between text-amber-600">
+                    <span>スキップ（締切過ぎ・未提出）:</span>
+                    <span className="font-semibold">{syncResult.skippedTasks}件</span>
+                  </div>
+                )}
               </div>
             )}
             {syncResult.totalFetched && (
               <p className="text-xs text-blue-600 pt-2 border-t border-blue-200">
                 ※ 「同期」は新規作成または更新した件数、「取得」はAPIから取得した件数です
+                <br />
+                締め切りが過ぎた未提出課題や既に提出済みの課題は自動的に処理されます
               </p>
             )}
           </div>

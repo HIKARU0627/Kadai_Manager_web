@@ -22,6 +22,17 @@ export interface SakaiAssignment {
   }
   context?: string // site ID
   entityReference?: string
+  status?: string // Assignment status (e.g., "Submitted", "Graded", "Open", etc.)
+  graded?: boolean // Whether the assignment has been graded
+  draft?: boolean // Whether submission is in draft
+  dropped?: boolean // Whether student has dropped
+  userSubmission?: boolean // Whether user has submitted
+  closeTime?: {
+    time: number
+  }
+  openTime?: {
+    time: number
+  }
 }
 
 export interface SakaiAnnouncement {
