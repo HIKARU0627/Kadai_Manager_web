@@ -230,6 +230,67 @@ export async function getAnnouncements(
 }
 
 /**
+ * Course material (content) item from Sakai
+ */
+export interface SakaiContent {
+  author: string
+  authorId: string
+  container: string
+  title: string
+  type: string // MIME type for files, "collection" for folders
+  url: string
+  size: number
+  modifiedDate: string
+  hidden: boolean
+  visible: boolean
+  description?: string | null
+  numChildren?: number // Only for collections
+}
+
+/**
+ * Get course materials (content) for a specific site
+ */
+export async function getSiteContents(
+  cookie: string,
+  siteId: string
+): Promise<SakaiAPIResponse<{ content_collection: SakaiContent[] }>> {
+  return fetchSakaiAPI<{ content_collection: SakaiContent[] }>(
+    `/direct/content/site/${siteId}.json`,
+    cookie
+  )
+}
+
+/**
+ * Get course materials for all sites
+ */
+export async function getAllSiteContents(
+  cookie: string,
+  sites: SakaiSite[]
+): Promise<SakaiAPIResponse<Map<string, SakaiContent[]>>> {
+  try {
+    const contentsBySite = new Map<string, SakaiContent[]>()
+
+    for (const site of sites) {
+      const result = await getSiteContents(cookie, site.id)
+      if (result.success && result.data?.content_collection) {
+        // Filter out collections (folders) - only include actual files
+        const files = result.data.content_collection.filter(
+          (content) => content.type !== "collection" && content.visible && !content.hidden
+        )
+        if (files.length > 0) {
+          contentsBySite.set(site.id, files)
+        }
+      }
+    }
+
+    return { success: true, data: contentsBySite }
+  } catch (error) {
+    console.error("Failed to get all site contents:", error)
+    return { success: false, error: "授業資料の取得に失敗しました" }
+  }
+}
+
+/**
  * Test if the cookie is valid by making a simple API call
  */
 export async function testConnection(cookie: string): Promise<SakaiAPIResponse<boolean>> {
