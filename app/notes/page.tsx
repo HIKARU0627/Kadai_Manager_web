@@ -61,37 +61,46 @@ export default function NotesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // データの取得
+  // 全科目を取得（初回のみ）
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSubjects = async () => {
       if (!session?.user?.id) return
 
-      console.log('=== データ取得 ===')
-      console.log('選択された学期ID:', selectedSemesterId)
-
-      setIsLoading(true)
-      const [notesResult, subjectsResult] = await Promise.all([
-        getNotes(session.user.id, {
-          semesterId: selectedSemesterId || undefined,
-        }),
-        getSubjects(session.user.id), // 全科目を取得
-      ])
-
-      if (notesResult.success) {
-        setNotes(notesResult.data as Note[])
-        console.log('取得されたメモ数:', notesResult.data.length)
-      }
+      console.log('=== 全科目を取得 ===')
+      const subjectsResult = await getSubjects(session.user.id)
 
       if (subjectsResult.success) {
         setSubjects(subjectsResult.data)
         console.log('取得された科目数:', subjectsResult.data.length)
         console.log('取得された科目:', subjectsResult.data)
       }
+    }
+
+    fetchSubjects()
+  }, [session?.user?.id])
+
+  // メモを取得（学期が変更されるたびに）
+  useEffect(() => {
+    const fetchNotes = async () => {
+      if (!session?.user?.id) return
+
+      console.log('=== メモを取得 ===')
+      console.log('選択された学期ID:', selectedSemesterId)
+
+      setIsLoading(true)
+      const notesResult = await getNotes(session.user.id, {
+        semesterId: selectedSemesterId || undefined,
+      })
+
+      if (notesResult.success) {
+        setNotes(notesResult.data as Note[])
+        console.log('取得されたメモ数:', notesResult.data.length)
+      }
 
       setIsLoading(false)
     }
 
-    fetchData()
+    fetchNotes()
   }, [session?.user?.id, selectedSemesterId])
 
   // 学期でフィルタリングされた科目リスト（モーダルで使用）
@@ -178,19 +187,12 @@ export default function NotesPage() {
     if (!session?.user?.id) return
 
     setIsLoading(true)
-    const [notesResult, subjectsResult] = await Promise.all([
-      getNotes(session.user.id, {
-        semesterId: selectedSemesterId || undefined,
-      }),
-      getSubjects(session.user.id), // 全科目を取得
-    ])
+    const notesResult = await getNotes(session.user.id, {
+      semesterId: selectedSemesterId || undefined,
+    })
 
     if (notesResult.success) {
       setNotes(notesResult.data as Note[])
-    }
-
-    if (subjectsResult.success) {
-      setSubjects(subjectsResult.data)
     }
 
     setIsLoading(false)
