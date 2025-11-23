@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { createNote, NoteType } from "@/app/actions/notes"
 import { Upload, X, FileIcon } from "lucide-react"
+import { MarkdownEditor } from "@/components/ui/markdown-editor"
 
 interface AddNoteModalProps {
   open: boolean
@@ -226,15 +227,23 @@ export function AddNoteModal({
               <Label htmlFor="content">
                 内容 <span className="text-red-500">*</span>
               </Label>
-              <Textarea
-                id="content"
+              <MarkdownEditor
                 value={formData.content}
-                onChange={(e) =>
-                  setFormData({ ...formData, content: e.target.value })
+                onChange={(value) =>
+                  setFormData({ ...formData, content: value })
                 }
-                placeholder="メモの内容を入力してください"
-                rows={6}
-                required
+                placeholder="マークダウンでメモの内容を入力してください
+
+## 例
+- **太字** `**太字**`
+- *斜体* `*斜体*`
+- [リンク](https://example.com)
+- `コード`
+
+```
+コードブロック
+```"
+                height={350}
               />
             </div>
 

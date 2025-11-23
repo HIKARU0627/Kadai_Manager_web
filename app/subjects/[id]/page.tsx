@@ -38,6 +38,7 @@ import { AddNoteModal } from "@/components/modals/AddNoteModal"
 import { EditNoteModal } from "@/components/modals/EditNoteModal"
 import { FileUploadModal } from "@/components/modals/FileUploadModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
 const weekDays = ["日", "月", "火", "水", "木", "金", "土"]
 const subjectTypes = {
@@ -484,9 +485,9 @@ export default function SubjectDetailPage() {
                                 <Badge variant="secondary">お知らせ</Badge>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600 mb-2 whitespace-pre-wrap">
-                              {note.content}
-                            </p>
+                            <div className="text-sm text-gray-600 mb-2 bg-gray-50 p-3 rounded border border-gray-200">
+                              <MarkdownRenderer content={note.content} className="text-sm" />
+                            </div>
                             <p className="text-xs text-gray-400">
                               {format(new Date(note.createdAt), "yyyy年MM月dd日 HH:mm", { locale: ja })}
                             </p>

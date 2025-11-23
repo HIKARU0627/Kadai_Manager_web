@@ -16,6 +16,7 @@ import { format } from "date-fns"
 import { ja } from "date-fns/locale"
 import { getNotes, deleteNote, type NoteType } from "@/app/actions/notes"
 import { getSubjects } from "@/app/actions/subjects"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
 const noteTypes = [
   { id: "all", label: "すべて", icon: FileText },
@@ -410,12 +411,12 @@ export default function NotesPage() {
                         {note.title || "無題"}
                       </h3>
 
-                      <p
-                        className="text-gray-600 mb-3 cursor-pointer hover:text-gray-800 transition line-clamp-3"
+                      <div
+                        className="mb-3 cursor-pointer hover:text-gray-800 transition line-clamp-3 overflow-hidden"
                         onClick={() => handleViewDetail(note)}
                       >
-                        {note.content}
-                      </p>
+                        <MarkdownRenderer content={note.content} className="text-sm" />
+                      </div>
 
                       {note.quizDate && (
                         <div className="flex items-center text-sm text-red-600 bg-red-50 p-2 rounded">

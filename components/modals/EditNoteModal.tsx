@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { updateNote, NoteType } from "@/app/actions/notes"
+import { MarkdownEditor } from "@/components/ui/markdown-editor"
 
 interface EditNoteModalProps {
   open: boolean
@@ -165,15 +166,13 @@ export function EditNoteModal({
               <Label htmlFor="content">
                 内容 <span className="text-red-500">*</span>
               </Label>
-              <Textarea
-                id="content"
+              <MarkdownEditor
                 value={formData.content}
-                onChange={(e) =>
-                  setFormData({ ...formData, content: e.target.value })
+                onChange={(value) =>
+                  setFormData({ ...formData, content: value })
                 }
-                placeholder="授業の内容や重要な情報を入力してください"
-                rows={5}
-                required
+                placeholder="マークダウンで授業の内容や重要な情報を入力してください"
+                height={350}
               />
             </div>
 
