@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -42,6 +42,7 @@ interface Subject {
   id: string
   name: string
   color: string
+  semesterId?: string | null
 }
 
 export default function NotesPage() {
@@ -60,32 +61,60 @@ export default function NotesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // データの取得
+  // 全科目を取得（初回のみ）
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSubjects = async () => {
+      if (!session?.user?.id) return
+
+      const subjectsResult = await getSubjects(session.user.id)
+
+      if (subjectsResult.success) {
+        setSubjects(subjectsResult.data)
+      }
+    }
+
+    fetchSubjects()
+  }, [session?.user?.id])
+
+  // メモを取得（学期が変更されるたびに）
+  useEffect(() => {
+    const fetchNotes = async () => {
       if (!session?.user?.id) return
 
       setIsLoading(true)
-      const [notesResult, subjectsResult] = await Promise.all([
-        getNotes(session.user.id, {
-          semesterId: selectedSemesterId || undefined,
-        }),
-        getSubjects(session.user.id, selectedSemesterId || undefined),
-      ])
+      const notesResult = await getNotes(session.user.id, {
+        semesterId: selectedSemesterId || undefined,
+      })
 
       if (notesResult.success) {
         setNotes(notesResult.data as Note[])
       }
 
-      if (subjectsResult.success) {
-        setSubjects(subjectsResult.data)
-      }
-
       setIsLoading(false)
     }
 
-    fetchData()
+    fetchNotes()
   }, [session?.user?.id, selectedSemesterId])
+
+  // 学期でフィルタリングされた科目リスト（モーダルで使用）
+  const filteredSubjectsForModal = useMemo(() => {
+    if (!selectedSemesterId) {
+      return subjects
+    }
+    return subjects.filter((subject: any) => subject.semesterId === selectedSemesterId)
+  }, [subjects, selectedSemesterId])
+
+  // 学期が変更されたときに科目フィルターをリセット
+  useEffect(() => {
+    if (selectedSubject !== "すべて") {
+      const subjectExists = filteredSubjectsForModal.some(
+        (subject) => subject.name === selectedSubject
+      )
+      if (!subjectExists) {
+        setSelectedSubject("すべて")
+      }
+    }
+  }, [selectedSemesterId, filteredSubjectsForModal, selectedSubject])
 
   // フィルタリングされたノート
   const filteredNotes = notes.filter((note) => {
@@ -100,10 +129,10 @@ export default function NotesPage() {
     return matchesSubject && matchesType && matchesSearch
   })
 
-  // 科目リスト（すべてを含む）
+  // 科目リスト（すべてを含む）- 学期でフィルタリングされたもの
   const subjectFilters = [
-    { name: "すべて", color: "#6B7280" },
-    ...subjects,
+    { id: "all", name: "すべて", color: "#6B7280" },
+    ...filteredSubjectsForModal,
   ]
 
   const getNoteTypeLabel = (type: string) => {
@@ -135,19 +164,12 @@ export default function NotesPage() {
     if (!session?.user?.id) return
 
     setIsLoading(true)
-    const [notesResult, subjectsResult] = await Promise.all([
-      getNotes(session.user.id, {
-        semesterId: selectedSemesterId || undefined,
-      }),
-      getSubjects(session.user.id, selectedSemesterId || undefined),
-    ])
+    const notesResult = await getNotes(session.user.id, {
+      semesterId: selectedSemesterId || undefined,
+    })
 
     if (notesResult.success) {
       setNotes(notesResult.data as Note[])
-    }
-
-    if (subjectsResult.success) {
-      setSubjects(subjectsResult.data)
     }
 
     setIsLoading(false)
@@ -253,7 +275,7 @@ export default function NotesPage() {
                 <div className="space-y-2">
                   {subjectFilters.map((subject) => (
                     <button
-                      key={subject.name}
+                      key={subject.id}
                       onClick={() => setSelectedSubject(subject.name)}
                       className={`w-full text-left px-3 py-2 rounded-lg transition ${
                         selectedSubject === subject.name
@@ -457,7 +479,7 @@ export default function NotesPage() {
       <AddNoteModal
         open={isAddModalOpen}
         onOpenChange={handleModalClose}
-        subjects={subjects}
+        subjects={filteredSubjectsForModal}
         userId={session?.user?.id || ""}
       />
 
@@ -465,7 +487,7 @@ export default function NotesPage() {
       <EditNoteModal
         open={isEditModalOpen}
         onOpenChange={handleEditModalClose}
-        subjects={subjects}
+        subjects={filteredSubjectsForModal}
         note={selectedNote}
       />
 
