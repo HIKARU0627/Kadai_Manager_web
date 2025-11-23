@@ -182,9 +182,9 @@ export default function NewNotePage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               {/* メインエリア */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-4 space-y-6">
                 {/* タイトル */}
                 <Card>
                   <CardHeader>
