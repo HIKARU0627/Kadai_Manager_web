@@ -1,5 +1,6 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -24,6 +25,19 @@ import {
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
 import { getSubject } from "@/app/actions/subjects"
+import { deleteTask } from "@/app/actions/tasks"
+import { deleteEvent } from "@/app/actions/events"
+import { deleteNote } from "@/app/actions/notes"
+import { deleteFile } from "@/app/actions/files"
+import { EditSubjectModal } from "@/components/modals/EditSubjectModal"
+import { AddTaskModal } from "@/components/modals/AddTaskModal"
+import { EditTaskModal } from "@/components/modals/EditTaskModal"
+import { AddEventModal } from "@/components/modals/AddEventModal"
+import { EditEventModal } from "@/components/modals/EditEventModal"
+import { AddNoteModal } from "@/components/modals/AddNoteModal"
+import { EditNoteModal } from "@/components/modals/EditNoteModal"
+import { FileUploadModal } from "@/components/modals/FileUploadModal"
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
 
 const weekDays = ["日", "月", "火", "水", "木", "金", "土"]
 const subjectTypes = {
@@ -48,6 +62,7 @@ const statusColors = {
 }
 
 export default function SubjectDetailPage() {
+  const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
   const subjectId = params.id as string
@@ -56,35 +71,111 @@ export default function SubjectDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // モーダル状態
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
+  const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
+  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false)
+  const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false)
+  const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false)
+  const [isEditNoteModalOpen, setIsEditNoteModalOpen] = useState(false)
+  const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  // 選択されたアイテム
+  const [selectedTask, setSelectedTask] = useState<any>(null)
+  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [selectedNote, setSelectedNote] = useState<any>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "task" | "event" | "note" | "file"
+    id: string
+    name: string
+  } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   // データ取得
-  useEffect(() => {
-    const fetchSubjectData = async () => {
-      if (!subjectId) {
-        setError("授業IDが見つかりません")
-        setIsLoading(false)
-        return
-      }
-
-      setIsLoading(true)
-
-      try {
-        const result = await getSubject(subjectId)
-
-        if (result.success && result.data) {
-          setSubject(result.data)
-          setError(null)
-        } else {
-          setError(result.error || "授業データの取得に失敗しました")
-        }
-      } catch (err) {
-        setError(`エラーが発生しました: ${err}`)
-      }
-
+  const fetchSubjectData = async () => {
+    if (!subjectId) {
+      setError("授業IDが見つかりません")
       setIsLoading(false)
+      return
     }
 
+    setIsLoading(true)
+
+    try {
+      const result = await getSubject(subjectId)
+
+      if (result.success && result.data) {
+        setSubject(result.data)
+        setError(null)
+      } else {
+        setError(result.error || "授業データの取得に失敗しました")
+      }
+    } catch (err) {
+      setError(`エラーが発生しました: ${err}`)
+    }
+
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
     fetchSubjectData()
   }, [subjectId])
+
+  // モーダルクローズハンドラー
+  const handleModalClose = async (open: boolean, setter: (value: boolean) => void) => {
+    setter(open)
+    if (!open) {
+      await fetchSubjectData()
+    }
+  }
+
+  // 削除ハンドラー
+  const handleDeleteClick = (type: "task" | "event" | "note" | "file", id: string, name: string) => {
+    setDeleteTarget({ type, id, name })
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+
+    setIsDeleting(true)
+    let result
+
+    switch (deleteTarget.type) {
+      case "task":
+        result = await deleteTask(deleteTarget.id)
+        break
+      case "event":
+        result = await deleteEvent(deleteTarget.id)
+        break
+      case "note":
+        result = await deleteNote(deleteTarget.id)
+        break
+      case "file":
+        result = await deleteFile(deleteTarget.id)
+        break
+    }
+
+    if (result.success) {
+      setIsDeleteDialogOpen(false)
+      setDeleteTarget(null)
+      await fetchSubjectData()
+    } else {
+      alert(result.error || "削除に失敗しました")
+    }
+
+    setIsDeleting(false)
+  }
+
+  // ファイルダウンロード
+  const handleFileDownload = (fileUrl: string, fileName: string) => {
+    const link = document.createElement("a")
+    link.href = fileUrl
+    link.download = fileName
+    link.click()
+  }
 
   if (isLoading) {
     return (
@@ -171,6 +262,14 @@ export default function SubjectDetailPage() {
                 )}
               </div>
             </div>
+
+            <Button
+              onClick={() => setIsEditModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              授業情報を編集
+            </Button>
           </div>
         </div>
 
@@ -195,7 +294,17 @@ export default function SubjectDetailPage() {
           <TabsContent value="tasks" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>課題一覧</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>課題一覧</CardTitle>
+                  <Button
+                    onClick={() => setIsAddTaskModalOpen(true)}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    課題を追加
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {subject.tasks && subject.tasks.length > 0 ? (
@@ -225,6 +334,26 @@ export default function SubjectDetailPage() {
                               </p>
                             )}
                           </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTask(task)
+                                setIsEditTaskModalOpen(true)
+                              }}
+                            >
+                              編集
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => handleDeleteClick("task", task.id, task.title)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -232,6 +361,13 @@ export default function SubjectDetailPage() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <p>課題がありません</p>
+                    <Button
+                      onClick={() => setIsAddTaskModalOpen(true)}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      最初の課題を追加
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -242,7 +378,17 @@ export default function SubjectDetailPage() {
           <TabsContent value="events" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>テスト・予定一覧</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>テスト・予定一覧</CardTitle>
+                  <Button
+                    onClick={() => setIsAddEventModalOpen(true)}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    予定を追加
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {subject.events && subject.events.length > 0 ? (
@@ -266,6 +412,26 @@ export default function SubjectDetailPage() {
                               {event.endDatetime && ` - ${format(new Date(event.endDatetime), "HH:mm", { locale: ja })}`}
                             </p>
                           </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedEvent(event)
+                                setIsEditEventModalOpen(true)
+                              }}
+                            >
+                              編集
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => handleDeleteClick("event", event.id, event.title)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -273,6 +439,13 @@ export default function SubjectDetailPage() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <p>テストや予定がありません</p>
+                    <Button
+                      onClick={() => setIsAddEventModalOpen(true)}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      最初の予定を追加
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -283,7 +456,17 @@ export default function SubjectDetailPage() {
           <TabsContent value="notes" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>授業メモ一覧</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>授業メモ一覧</CardTitle>
+                  <Button
+                    onClick={() => setIsAddNoteModalOpen(true)}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    メモを追加
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {subject.notes && subject.notes.length > 0 ? (
@@ -308,6 +491,26 @@ export default function SubjectDetailPage() {
                               {format(new Date(note.createdAt), "yyyy年MM月dd日 HH:mm", { locale: ja })}
                             </p>
                           </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedNote(note)
+                                setIsEditNoteModalOpen(true)
+                              }}
+                            >
+                              編集
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => handleDeleteClick("note", note.id, note.title)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -315,6 +518,13 @@ export default function SubjectDetailPage() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <p>授業メモがありません</p>
+                    <Button
+                      onClick={() => setIsAddNoteModalOpen(true)}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      最初のメモを追加
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -325,7 +535,17 @@ export default function SubjectDetailPage() {
           <TabsContent value="files" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>ファイル一覧</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>ファイル一覧</CardTitle>
+                  <Button
+                    onClick={() => setIsFileUploadModalOpen(true)}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    ファイルをアップロード
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {subject.files && subject.files.length > 0 ? (
@@ -346,6 +566,26 @@ export default function SubjectDetailPage() {
                               </p>
                             </div>
                           </div>
+                          <div className="flex gap-2 ml-4">
+                            {file.fileUrl && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleFileDownload(file.fileUrl, file.fileName)}
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                ダウンロード
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => handleDeleteClick("file", file.id, file.fileName)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -353,6 +593,13 @@ export default function SubjectDetailPage() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <p>ファイルがありません</p>
+                    <Button
+                      onClick={() => setIsFileUploadModalOpen(true)}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      最初のファイルをアップロード
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -360,6 +607,74 @@ export default function SubjectDetailPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* モーダル群 */}
+      <EditSubjectModal
+        open={isEditModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsEditModalOpen)}
+        subject={subject}
+      />
+
+      <AddTaskModal
+        open={isAddTaskModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsAddTaskModalOpen)}
+        userId={session?.user?.id || ""}
+        subjects={[subject]}
+        defaultSubjectId={subject.id}
+      />
+
+      <EditTaskModal
+        open={isEditTaskModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsEditTaskModalOpen)}
+        task={selectedTask}
+        subjects={[subject]}
+      />
+
+      <AddEventModal
+        open={isAddEventModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsAddEventModalOpen)}
+        userId={session?.user?.id || ""}
+        subjects={[subject]}
+        defaultSubjectId={subject.id}
+      />
+
+      <EditEventModal
+        open={isEditEventModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsEditEventModalOpen)}
+        event={selectedEvent}
+        subjects={[subject]}
+      />
+
+      <AddNoteModal
+        open={isAddNoteModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsAddNoteModalOpen)}
+        userId={session?.user?.id || ""}
+        subjects={[subject]}
+        defaultSubjectId={subject.id}
+      />
+
+      <EditNoteModal
+        open={isEditNoteModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsEditNoteModalOpen)}
+        note={selectedNote}
+        subjects={[subject]}
+      />
+
+      <FileUploadModal
+        open={isFileUploadModalOpen}
+        onOpenChange={(open) => handleModalClose(open, setIsFileUploadModalOpen)}
+        userId={session?.user?.id || ""}
+        subjectId={subject.id}
+      />
+
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title={`${deleteTarget?.type === "task" ? "課題" : deleteTarget?.type === "event" ? "予定" : deleteTarget?.type === "note" ? "メモ" : "ファイル"}を削除しますか？`}
+        description={`「${deleteTarget?.name || ""}」を削除します。この操作は取り消せません。`}
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }
