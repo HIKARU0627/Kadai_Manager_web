@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -138,6 +139,7 @@ export default function SubjectsPage() {
 
   // 詳細表示のハンドラー
   const handleViewDetail = (subject: Subject) => {
+    console.log('Navigating to subject detail:', subject.id)
     router.push(`/subjects/${subject.id}`)
   }
 
@@ -274,30 +276,31 @@ export default function SubjectsPage() {
                             className="px-4 py-4 border-b text-center"
                           >
                             {subject ? (
-                              <div
-                                className="p-3 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer"
-                                style={{
-                                  backgroundColor: `${subject.color}15`,
-                                  borderLeft: `4px solid ${subject.color}`,
-                                }}
-                                onClick={() => handleViewDetail(subject)}
-                              >
-                                <p className="font-semibold text-gray-800">
-                                  {subject.name}
-                                </p>
-                                {subject.teacher && (
-                                  <p className="text-sm text-gray-600 flex items-center justify-center mt-1">
-                                    <User className="w-3 h-3 mr-1" />
-                                    {subject.teacher}
+                              <Link href={`/subjects/${subject.id}`}>
+                                <div
+                                  className="p-3 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer"
+                                  style={{
+                                    backgroundColor: `${subject.color}15`,
+                                    borderLeft: `4px solid ${subject.color}`,
+                                  }}
+                                >
+                                  <p className="font-semibold text-gray-800">
+                                    {subject.name}
                                   </p>
-                                )}
-                                {subject.classroom && (
-                                  <p className="text-sm text-gray-500 flex items-center justify-center mt-1">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    {subject.classroom}
-                                  </p>
-                                )}
-                              </div>
+                                  {subject.teacher && (
+                                    <p className="text-sm text-gray-600 flex items-center justify-center mt-1">
+                                      <User className="w-3 h-3 mr-1" />
+                                      {subject.teacher}
+                                    </p>
+                                  )}
+                                  {subject.classroom && (
+                                    <p className="text-sm text-gray-500 flex items-center justify-center mt-1">
+                                      <MapPin className="w-3 h-3 mr-1" />
+                                      {subject.classroom}
+                                    </p>
+                                  )}
+                                </div>
+                              </Link>
                             ) : (
                               <Button
                                 variant="ghost"
