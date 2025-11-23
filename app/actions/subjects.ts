@@ -116,7 +116,7 @@ export async function getSubject(id: string) {
         },
         events: {
           orderBy: {
-            startDate: "asc",
+            startDatetime: "asc",
           },
         },
         notes: {
