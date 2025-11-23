@@ -83,13 +83,16 @@ export function Sidebar() {
         "border-b border-gray-200 flex items-center justify-between",
         isOpen ? "p-6" : "p-4"
       )}>
-        {isOpen && (
-          <h1 className="text-2xl font-bold text-blue-600">学校管理アプリ</h1>
-        )}
+        <h1 className={cn(
+          "text-2xl font-bold text-blue-600 whitespace-nowrap overflow-hidden transition-all duration-300",
+          isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+        )}>
+          学校管理アプリ
+        </h1>
         <button
           onClick={toggle}
           className={cn(
-            "p-2 rounded-lg hover:bg-gray-100 transition-colors",
+            "p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0",
             !isOpen && "mx-auto"
           )}
           aria-label={isOpen ? "サイドバーを閉じる" : "サイドバーを開く"}
@@ -121,8 +124,13 @@ export function Sidebar() {
                   )}
                   title={!isOpen ? item.title : undefined}
                 >
-                  <Icon className={cn("w-5 h-5", isOpen && "mr-3")} />
-                  {isOpen && <span>{item.title}</span>}
+                  <Icon className={cn("w-5 h-5 flex-shrink-0", isOpen && "mr-3")} />
+                  <span className={cn(
+                    "whitespace-nowrap overflow-hidden transition-all duration-300",
+                    isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+                  )}>
+                    {item.title}
+                  </span>
                 </Link>
               </li>
             )
@@ -141,16 +149,17 @@ export function Sidebar() {
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                   {userInitial}
                 </div>
-                {isOpen && (
-                  <div className="ml-3 flex-1 overflow-hidden">
-                    <p className="font-medium text-gray-700 truncate">
-                      {session.user.name || session.user.username}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {session.user.email}
-                    </p>
-                  </div>
-                )}
+                <div className={cn(
+                  "ml-3 flex-1 overflow-hidden transition-all duration-300",
+                  isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+                )}>
+                  <p className="font-medium text-gray-700 truncate whitespace-nowrap">
+                    {session.user.name || session.user.username}
+                  </p>
+                  <p className="text-sm text-gray-500 truncate whitespace-nowrap">
+                    {session.user.email}
+                  </p>
+                </div>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
