@@ -66,6 +66,9 @@ export default function NotesPage() {
     const fetchData = async () => {
       if (!session?.user?.id) return
 
+      console.log('=== データ取得 ===')
+      console.log('選択された学期ID:', selectedSemesterId)
+
       setIsLoading(true)
       const [notesResult, subjectsResult] = await Promise.all([
         getNotes(session.user.id, {
@@ -76,10 +79,13 @@ export default function NotesPage() {
 
       if (notesResult.success) {
         setNotes(notesResult.data as Note[])
+        console.log('取得されたメモ数:', notesResult.data.length)
       }
 
       if (subjectsResult.success) {
         setSubjects(subjectsResult.data)
+        console.log('取得された科目数:', subjectsResult.data.length)
+        console.log('取得された科目:', subjectsResult.data)
       }
 
       setIsLoading(false)
@@ -90,10 +96,26 @@ export default function NotesPage() {
 
   // 学期でフィルタリングされた科目リスト（モーダルで使用）
   const filteredSubjectsForModal = useMemo(() => {
+    console.log('=== 科目フィルタリング デバッグ ===')
+    console.log('選択された学期ID:', selectedSemesterId)
+    console.log('全科目数:', subjects.length)
+    console.log('全科目データ:', subjects)
+
     if (!selectedSemesterId) {
+      console.log('学期が選択されていないため、全科目を返します')
       return subjects
     }
-    return subjects.filter((subject: any) => subject.semesterId === selectedSemesterId)
+
+    const filtered = subjects.filter((subject: any) => {
+      const matches = subject.semesterId === selectedSemesterId
+      console.log(`科目「${subject.name}」: semesterId=${subject.semesterId}, 一致=${matches}`)
+      return matches
+    })
+
+    console.log('フィルタリング後の科目数:', filtered.length)
+    console.log('フィルタリング後の科目:', filtered)
+    console.log('=================================')
+    return filtered
   }, [subjects, selectedSemesterId])
 
   // 学期が変更されたときに科目フィルターをリセット
