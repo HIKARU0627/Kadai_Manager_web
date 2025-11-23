@@ -169,6 +169,7 @@ export function FileManagerContent({
         if (filterFileSource === "local") return file.fileSource === "local" || !file.fileSource
         if (filterFileSource === "sakai_assignment") return file.fileSource === "sakai_assignment"
         if (filterFileSource === "sakai_submission") return file.fileSource === "sakai_submission"
+        if (filterFileSource === "sakai_course_material") return file.fileSource === "sakai_course_material"
         return true
       })
     }
@@ -305,6 +306,8 @@ export function FileManagerContent({
         return { label: "課題添付", color: "bg-blue-100 text-blue-700" }
       case "sakai_submission":
         return { label: "提出済み", color: "bg-green-100 text-green-700" }
+      case "sakai_course_material":
+        return { label: "授業資料", color: "bg-purple-100 text-purple-700" }
       case "local":
       default:
         return { label: "手動追加", color: "bg-gray-100 text-gray-700" }
@@ -458,7 +461,7 @@ export function FileManagerContent({
               <Download className="w-4 h-4" />
             </Button>
           )}
-          {file.fileSource === "local" || !file.fileSource ? (
+          {(file.fileSource === "local" || !file.fileSource) ? (
             <Button
               size="sm"
               variant="ghost"
@@ -552,7 +555,7 @@ export function FileManagerContent({
                 <Download className="w-4 h-4" />
               </Button>
             )}
-            {file.fileSource === "local" || !file.fileSource ? (
+            {(file.fileSource === "local" || !file.fileSource) ? (
               <Button
                 size="sm"
                 variant="ghost"
@@ -708,6 +711,7 @@ export function FileManagerContent({
                       <SelectItem value="local">手動追加</SelectItem>
                       <SelectItem value="sakai_assignment">課題添付</SelectItem>
                       <SelectItem value="sakai_submission">提出済み</SelectItem>
+                      <SelectItem value="sakai_course_material">授業資料</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

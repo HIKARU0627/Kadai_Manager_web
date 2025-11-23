@@ -36,12 +36,14 @@ export function TactSettings({ userId }: TactSettingsProps) {
     subjects: number
     tasks: number
     announcements: number
+    courseMaterials: number
     scheduleParsed?: number
     errors: number
     totalFetched?: {
       subjects: number
       tasks: number
       announcements: number
+      courseMaterials: number
     }
   } | null>(null)
 
@@ -243,6 +245,17 @@ export function TactSettings({ userId }: TactSettingsProps) {
                   )}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span>授業資料:</span>
+                <span className="font-semibold">
+                  {syncResult.courseMaterials}件
+                  {syncResult.totalFetched && (
+                    <span className="text-xs ml-2 text-blue-600">
+                      （取得: {syncResult.totalFetched.courseMaterials}件）
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
             {syncResult.errors > 0 && (
               <div className="pt-2 border-t border-blue-200">
@@ -267,6 +280,8 @@ export function TactSettings({ userId }: TactSettingsProps) {
                 提出済み課題は「完了」、締め切り過ぎの未提出課題は「時間切れ」に分類されます
                 <br />
                 授業名に曜日・時限の情報があれば自動的に時間割に追加されます（例: 数学A (月1)）
+                <br />
+                授業資料はポータルページで公開されているファイルがファイル管理に追加されます
               </p>
             )}
           </div>

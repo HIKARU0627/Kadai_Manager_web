@@ -5,11 +5,13 @@ import {
   getSites,
   getAllSiteAssignments,
   getAllSiteAnnouncements,
+  getAllSiteContents,
   testConnection,
   parseScheduleFromTitle,
   type SakaiSite,
   type SakaiAssignment,
   type SakaiAnnouncement,
+  type SakaiContent,
 } from "@/lib/sakai-api"
 import { revalidatePath } from "next/cache"
 import { getOrCreateCurrentSemester, getOrCreateSemester } from "./semesters"
@@ -551,6 +553,81 @@ async function syncAnnouncements(
 }
 
 /**
+ * Sync course materials from TACT
+ */
+async function syncCourseMaterials(
+  userId: string,
+  contentsBySite: Map<string, SakaiContent[]>
+) {
+  let syncedCount = 0
+  let errorCount = 0
+
+  for (const [siteId, contents] of contentsBySite.entries()) {
+    try {
+      // Find corresponding subject
+      const subject = await prisma.subject.findFirst({
+        where: {
+          userId,
+          sakaiId: siteId,
+        },
+      })
+
+      if (!subject) {
+        continue
+      }
+
+      // Get existing course material files for this subject from Sakai
+      const existingFiles = await prisma.file.findMany({
+        where: {
+          userId,
+          subjectId: subject.id,
+          fileSource: "sakai_course_material",
+        },
+      })
+
+      const existingUrls = new Set(existingFiles.map((f) => f.sakaiUrl))
+      const currentUrls = new Set<string>()
+
+      // Sync each course material file
+      for (const content of contents) {
+        if (!content.url) continue
+        currentUrls.add(content.url)
+
+        if (!existingUrls.has(content.url)) {
+          await prisma.file.create({
+            data: {
+              userId,
+              subjectId: subject.id,
+              fileName: content.title || "授業資料",
+              fileUrl: content.url,
+              sakaiUrl: content.url,
+              sakaiRef: content.url, // Use URL as reference for course materials
+              fileType: content.type || null,
+              fileSize: content.size || null,
+              fileSource: "sakai_course_material",
+            },
+          })
+          syncedCount++
+        }
+      }
+
+      // Delete files that no longer exist in Sakai
+      const filesToDelete = existingFiles.filter(
+        (f) => f.sakaiUrl && !currentUrls.has(f.sakaiUrl)
+      )
+      for (const file of filesToDelete) {
+        await prisma.file.delete({ where: { id: file.id } })
+      }
+    } catch (error) {
+      console.error(`Error syncing course materials for site ${siteId}:`, error)
+      errorCount++
+    }
+  }
+
+  return { syncedCount, errorCount }
+}
+
+/**
  * Sync all data from TACT
  */
 export async function syncTactData(userId: string) {
@@ -576,10 +653,11 @@ export async function syncTactData(userId: string) {
 
     const sites = sitesResult.data?.site_collection || []
 
-    // Fetch assignments and announcements for all sites in parallel
-    const [assignmentsResult, announcementsResult] = await Promise.all([
+    // Fetch assignments, announcements, and course materials for all sites in parallel
+    const [assignmentsResult, announcementsResult, contentsResult] = await Promise.all([
       getAllSiteAssignments(cookie, sites),
       getAllSiteAnnouncements(cookie, sites),
+      getAllSiteContents(cookie, sites),
     ])
 
     if (!assignmentsResult.success) {
@@ -600,18 +678,32 @@ export async function syncTactData(userId: string) {
 
     const announcements = announcementsResult.data || []
 
+    if (!contentsResult.success) {
+      return {
+        success: false,
+        error: contentsResult.error || "授業資料の取得に失敗しました",
+      }
+    }
+
+    const contentsBySite = contentsResult.data || new Map()
+    const totalContents = Array.from(contentsBySite.values()).reduce(
+      (sum, contents) => sum + contents.length,
+      0
+    )
+
     // Log fetched data counts for debugging
-    console.log(`[TACT Sync] Fetched from API - Sites: ${sites.length}, Assignments: ${assignments.length}, Announcements: ${announcements.length}`)
+    console.log(`[TACT Sync] Fetched from API - Sites: ${sites.length}, Assignments: ${assignments.length}, Announcements: ${announcements.length}, Course Materials: ${totalContents}`)
 
     // Sync subjects (semester will be determined from each subject's title)
     const subjectsResult = await syncSubjects(userId, cookie, sites)
     const assignmentsSync = await syncAssignments(userId, cookie, assignments)
     const announcementsSync = await syncAnnouncements(userId, cookie, announcements)
+    const courseMaterialsSync = await syncCourseMaterials(userId, contentsBySite)
 
     // Log sync results
-    console.log(`[TACT Sync] Synced - Subjects: ${subjectsResult.syncedCount}/${sites.length}, Tasks: ${assignmentsSync.syncedCount}/${assignments.length}, Announcements: ${announcementsSync.syncedCount}/${announcements.length}`)
+    console.log(`[TACT Sync] Synced - Subjects: ${subjectsResult.syncedCount}/${sites.length}, Tasks: ${assignmentsSync.syncedCount}/${assignments.length}, Announcements: ${announcementsSync.syncedCount}/${announcements.length}, Course Materials: ${courseMaterialsSync.syncedCount}/${totalContents}`)
     console.log(`[TACT Sync] Schedule parsed - ${subjectsResult.scheduleParsedCount} subjects added to timetable`)
-    console.log(`[TACT Sync] Errors - Subjects: ${subjectsResult.errorCount}, Tasks: ${assignmentsSync.errorCount}, Announcements: ${announcementsSync.errorCount}`)
+    console.log(`[TACT Sync] Errors - Subjects: ${subjectsResult.errorCount}, Tasks: ${assignmentsSync.errorCount}, Announcements: ${announcementsSync.errorCount}, Course Materials: ${courseMaterialsSync.errorCount}`)
 
     // Update last sync time
     await prisma.user.update({
@@ -623,6 +715,7 @@ export async function syncTactData(userId: string) {
     revalidatePath("/subjects")
     revalidatePath("/tasks")
     revalidatePath("/notes")
+    revalidatePath("/files")
 
     return {
       success: true,
@@ -630,15 +723,18 @@ export async function syncTactData(userId: string) {
         subjects: subjectsResult.syncedCount,
         tasks: assignmentsSync.syncedCount,
         announcements: announcementsSync.syncedCount,
+        courseMaterials: courseMaterialsSync.syncedCount,
         scheduleParsed: subjectsResult.scheduleParsedCount,
         errors:
           subjectsResult.errorCount +
           assignmentsSync.errorCount +
-          announcementsSync.errorCount,
+          announcementsSync.errorCount +
+          courseMaterialsSync.errorCount,
         totalFetched: {
           subjects: sites.length,
           tasks: assignments.length,
           announcements: announcements.length,
+          courseMaterials: totalContents,
         },
       },
     }
