@@ -2,6 +2,8 @@
 
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -48,6 +50,7 @@ interface Subject {
 
 export default function NotesPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [selectedSubject, setSelectedSubject] = useState("すべて")
   const [selectedNoteType, setSelectedNoteType] = useState("all")
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null)
@@ -201,8 +204,7 @@ export default function NotesPage() {
 
   // 編集ボタンのハンドラー
   const handleEdit = (note: Note) => {
-    setSelectedNote(note)
-    setIsEditModalOpen(true)
+    router.push(`/notes/${note.id}/edit`)
   }
 
   // 削除ボタンのハンドラー
@@ -242,13 +244,21 @@ export default function NotesPage() {
               授業の重要事項、小テスト日程、連絡事項を管理
             </p>
           </div>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            新規メモを追加
-          </Button>
+          <div className="flex gap-3">
+            <Link href="/notes/new">
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <FileText className="w-5 h-5 mr-2" />
+                授業ノートを作成
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              簡単なメモを追加
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

@@ -459,14 +459,25 @@ export default function SubjectDetailPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>授業メモ一覧</CardTitle>
-                  <Button
-                    onClick={() => setIsAddNoteModalOpen(true)}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    メモを追加
-                  </Button>
+                  <div className="flex gap-2">
+                    <Link href={`/notes/new?subjectId=${subject.id}`}>
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        ノート作成
+                      </Button>
+                    </Link>
+                    <Button
+                      onClick={() => setIsAddNoteModalOpen(true)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      メモ追加
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -493,16 +504,14 @@ export default function SubjectDetailPage() {
                             </p>
                           </div>
                           <div className="flex gap-2 ml-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedNote(note)
-                                setIsEditNoteModalOpen(true)
-                              }}
-                            >
-                              編集
-                            </Button>
+                            <Link href={`/notes/${note.id}/edit`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                              >
+                                編集
+                              </Button>
+                            </Link>
                             <Button
                               variant="outline"
                               size="sm"
@@ -519,13 +528,12 @@ export default function SubjectDetailPage() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <p>授業メモがありません</p>
-                    <Button
-                      onClick={() => setIsAddNoteModalOpen(true)}
-                      className="mt-4 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      最初のメモを追加
-                    </Button>
+                    <Link href={`/notes/new?subjectId=${subject.id}`}>
+                      <Button className="mt-4 bg-blue-600 hover:bg-blue-700">
+                        <FileText className="w-4 h-4 mr-2" />
+                        最初のノートを作成
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </CardContent>
