@@ -103,18 +103,54 @@ export async function deleteSubject(id: string) {
 // 科目を取得（単一）
 export async function getSubject(id: string) {
   try {
+    console.log("[getSubject] Fetching subject with ID:", id)
+
     const subject = await prisma.subject.findUnique({
       where: { id },
       include: {
-        tasks: true,
-        notes: true,
+        semester: true,
+        tasks: {
+          orderBy: {
+            dueDate: "asc",
+          },
+        },
+        events: {
+          orderBy: {
+            startDatetime: "asc",
+          },
+        },
+        notes: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        files: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
       },
     })
 
+    console.log("[getSubject] Query result:", subject)
+
+    if (!subject) {
+      console.error("[getSubject] Subject not found")
+      return { success: false, error: "指定された授業が見つかりませんでした" }
+    }
+
     return { success: true, data: subject }
   } catch (error) {
-    console.error("Failed to get subject:", error)
-    return { success: false, error: "科目の取得に失敗しました" }
+    console.error("[getSubject] Error occurred:", error)
+    console.error("[getSubject] Error details:", {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    return {
+      success: false,
+      error: `科目の取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`
+    }
   }
 }
 
