@@ -21,7 +21,10 @@ import {
   LogOut,
   Settings,
   FolderOpen,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
+import { useSidebar } from "@/components/providers/SidebarProvider"
 
 const navItems = [
   {
@@ -59,6 +62,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { isOpen, toggle } = useSidebar()
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" })
@@ -69,12 +73,36 @@ export function Sidebar() {
     : session?.user?.email?.charAt(0).toUpperCase() || "U"
 
   return (
-    <aside className="w-64 bg-white shadow-lg flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-blue-600">学校管理アプリ</h1>
+    <aside
+      className={cn(
+        "bg-white shadow-lg flex flex-col transition-all duration-300 relative",
+        isOpen ? "w-64" : "w-20"
+      )}
+    >
+      <div className={cn(
+        "border-b border-gray-200 flex items-center justify-between",
+        isOpen ? "p-6" : "p-4"
+      )}>
+        {isOpen && (
+          <h1 className="text-2xl font-bold text-blue-600">学校管理アプリ</h1>
+        )}
+        <button
+          onClick={toggle}
+          className={cn(
+            "p-2 rounded-lg hover:bg-gray-100 transition-colors",
+            !isOpen && "mx-auto"
+          )}
+          aria-label={isOpen ? "サイドバーを閉じる" : "サイドバーを開く"}
+        >
+          {isOpen ? (
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          )}
+        </button>
       </div>
 
-      <nav className="p-4 flex-1">
+      <nav className="p-4 flex-1 overflow-hidden">
         <ul className="space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon
@@ -88,11 +116,13 @@ export function Sidebar() {
                     "flex items-center p-3 rounded-lg transition-colors",
                     isActive
                       ? "bg-blue-50 text-blue-600 font-medium"
-                      : "text-gray-600 hover:bg-gray-50"
+                      : "text-gray-600 hover:bg-gray-50",
+                    !isOpen && "justify-center"
                   )}
+                  title={!isOpen ? item.title : undefined}
                 >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.title}
+                  <Icon className={cn("w-5 h-5", isOpen && "mr-3")} />
+                  {isOpen && <span>{item.title}</span>}
                 </Link>
               </li>
             )
@@ -104,18 +134,23 @@ export function Sidebar() {
         {session?.user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              <div className={cn(
+                "flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer",
+                !isOpen && "justify-center"
+              )}>
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                   {userInitial}
                 </div>
-                <div className="ml-3 flex-1 overflow-hidden">
-                  <p className="font-medium text-gray-700 truncate">
-                    {session.user.name || session.user.username}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {session.user.email}
-                  </p>
-                </div>
+                {isOpen && (
+                  <div className="ml-3 flex-1 overflow-hidden">
+                    <p className="font-medium text-gray-700 truncate">
+                      {session.user.name || session.user.username}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {session.user.email}
+                    </p>
+                  </div>
+                )}
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
