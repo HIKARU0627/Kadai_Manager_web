@@ -124,6 +124,13 @@ export async function getFiles(userId: string, filters?: {
           select: {
             id: true,
             title: true,
+            subject: {
+              select: {
+                id: true,
+                name: true,
+                semesterId: true,
+              },
+            },
           },
         },
         note: {

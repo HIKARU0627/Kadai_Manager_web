@@ -13,6 +13,14 @@ export interface SakaiSite {
   props?: Record<string, any> // Additional properties that might contain schedule info
 }
 
+export interface SakaiAttachment {
+  name: string
+  url: string
+  ref: string
+  type: string
+  size: number
+}
+
 export interface SakaiSubmission {
   id: string
   submitted: boolean
@@ -23,11 +31,7 @@ export interface SakaiSubmission {
   grade?: string
   dateSubmitted?: string
   dateSubmittedEpochSeconds?: number
-  submittedAttachments?: Array<{
-    name: string
-    url: string
-    type: string
-  }>
+  submittedAttachments?: SakaiAttachment[]
 }
 
 export interface SakaiAssignment {
@@ -55,6 +59,7 @@ export interface SakaiAssignment {
     time?: number
   }
   submissions?: SakaiSubmission[] // Submission details from site endpoint
+  attachments?: SakaiAttachment[] // Assignment attachments (files provided by instructor)
 }
 
 export interface SakaiAnnouncement {
