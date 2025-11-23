@@ -3,8 +3,11 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 interface MarkdownRendererProps {
   content: string
@@ -15,8 +18,8 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
   return (
     <div className={`prose prose-sm max-w-none ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeRaw, rehypeKatex, rehypeSanitize]}
         components={{
           // カスタムスタイリング
           h1: ({ node, ...props }) => (
