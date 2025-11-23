@@ -79,31 +79,32 @@ export default async function DashboardPage() {
                   {todaySubjects.map((subject) => {
                     const periodTime = periodMap.get(subject.period)
                     return (
-                      <div
-                        key={subject.id}
-                        className="border-l-4 p-4 rounded-r-lg"
-                        style={{
-                          borderLeftColor: subject.color,
-                          backgroundColor: `${subject.color}10`,
-                        }}
-                      >
-                        <p className="font-semibold text-gray-800">
-                          {subject.period}限: {subject.name}
-                        </p>
-                        {periodTime && (
-                          <p className="text-sm text-gray-600 flex items-center mt-1">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {periodTime.startTime} - {periodTime.endTime}
+                      <Link key={subject.id} href={`/subjects/${subject.id}`}>
+                        <div
+                          className="border-l-4 p-4 rounded-r-lg cursor-pointer hover:shadow-md transition"
+                          style={{
+                            borderLeftColor: subject.color,
+                            backgroundColor: `${subject.color}10`,
+                          }}
+                        >
+                          <p className="font-semibold text-gray-800">
+                            {subject.period}限: {subject.name}
                           </p>
-                        )}
-                        {(subject.classroom || subject.teacher) && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            {subject.classroom && `教室: ${subject.classroom}`}
-                            {subject.classroom && subject.teacher && " / "}
-                            {subject.teacher && `担当: ${subject.teacher}`}
-                          </p>
-                        )}
-                      </div>
+                          {periodTime && (
+                            <p className="text-sm text-gray-600 flex items-center mt-1">
+                              <Clock className="w-4 h-4 mr-1" />
+                              {periodTime.startTime} - {periodTime.endTime}
+                            </p>
+                          )}
+                          {(subject.classroom || subject.teacher) && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {subject.classroom && `教室: ${subject.classroom}`}
+                              {subject.classroom && subject.teacher && " / "}
+                              {subject.teacher && `担当: ${subject.teacher}`}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
                     )
                   })}
                 </div>

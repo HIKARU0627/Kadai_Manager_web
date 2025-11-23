@@ -106,8 +106,27 @@ export async function getSubject(id: string) {
     const subject = await prisma.subject.findUnique({
       where: { id },
       include: {
-        tasks: true,
-        notes: true,
+        semester: true,
+        tasks: {
+          orderBy: {
+            dueDate: "asc",
+          },
+        },
+        events: {
+          orderBy: {
+            startDate: "asc",
+          },
+        },
+        notes: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        files: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
       },
     })
 

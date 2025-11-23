@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -42,6 +43,7 @@ interface Subject {
 
 export default function SubjectsPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -136,8 +138,7 @@ export default function SubjectsPage() {
 
   // 詳細表示のハンドラー
   const handleViewDetail = (subject: Subject) => {
-    setSelectedSubject(subject)
-    setIsDetailModalOpen(true)
+    router.push(`/subjects/${subject.id}`)
   }
 
   // 編集ボタンのハンドラー
@@ -372,10 +373,10 @@ export default function SubjectsPage() {
                           size="sm"
                           className="flex-1"
                           onClick={() => handleViewDetail(subject)}
-                          title="ファイル管理"
+                          title="授業詳細を表示"
                         >
                           <FileText className="w-4 h-4 mr-1" />
-                          ファイル
+                          詳細
                         </Button>
                         <Button
                           variant="outline"
