@@ -16,6 +16,7 @@ import { getNoteFiles, deleteFile } from "@/app/actions/files"
 import { FileIcon, Download, Trash2, Calendar, Eye } from "lucide-react"
 import { format } from "date-fns"
 import { ja } from "date-fns/locale"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
 interface NoteDetailModalProps {
   open: boolean
@@ -170,7 +171,9 @@ export function NoteDetailModal({
           {/* 内容 */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-2">内容</h3>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">{note.content}</p>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <MarkdownRenderer content={note.content} />
+            </div>
           </div>
 
           {/* 作成日 */}

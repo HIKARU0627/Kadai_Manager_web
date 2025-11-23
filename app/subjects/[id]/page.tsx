@@ -38,6 +38,7 @@ import { AddNoteModal } from "@/components/modals/AddNoteModal"
 import { EditNoteModal } from "@/components/modals/EditNoteModal"
 import { FileUploadModal } from "@/components/modals/FileUploadModal"
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
 const weekDays = ["日", "月", "火", "水", "木", "金", "土"]
 const subjectTypes = {
@@ -458,14 +459,25 @@ export default function SubjectDetailPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>授業メモ一覧</CardTitle>
-                  <Button
-                    onClick={() => setIsAddNoteModalOpen(true)}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    メモを追加
-                  </Button>
+                  <div className="flex gap-2">
+                    <Link href={`/notes/new?subjectId=${subject.id}`}>
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        ノート作成
+                      </Button>
+                    </Link>
+                    <Button
+                      onClick={() => setIsAddNoteModalOpen(true)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      メモ追加
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -484,24 +496,22 @@ export default function SubjectDetailPage() {
                                 <Badge variant="secondary">お知らせ</Badge>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600 mb-2 whitespace-pre-wrap">
-                              {note.content}
-                            </p>
+                            <div className="text-sm text-gray-600 mb-2 bg-gray-50 p-3 rounded border border-gray-200">
+                              <MarkdownRenderer content={note.content} className="text-sm" />
+                            </div>
                             <p className="text-xs text-gray-400">
                               {format(new Date(note.createdAt), "yyyy年MM月dd日 HH:mm", { locale: ja })}
                             </p>
                           </div>
                           <div className="flex gap-2 ml-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedNote(note)
-                                setIsEditNoteModalOpen(true)
-                              }}
-                            >
-                              編集
-                            </Button>
+                            <Link href={`/notes/${note.id}/edit`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                              >
+                                編集
+                              </Button>
+                            </Link>
                             <Button
                               variant="outline"
                               size="sm"
@@ -518,13 +528,12 @@ export default function SubjectDetailPage() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <p>授業メモがありません</p>
-                    <Button
-                      onClick={() => setIsAddNoteModalOpen(true)}
-                      className="mt-4 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      最初のメモを追加
-                    </Button>
+                    <Link href={`/notes/new?subjectId=${subject.id}`}>
+                      <Button className="mt-4 bg-blue-600 hover:bg-blue-700">
+                        <FileText className="w-4 h-4 mr-2" />
+                        最初のノートを作成
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </CardContent>
