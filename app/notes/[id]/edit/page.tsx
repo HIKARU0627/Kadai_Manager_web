@@ -146,7 +146,7 @@ export default function EditNotePage() {
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-8">
+        <div className="w-full p-8">
           {/* ヘッダー */}
           <div className="mb-6">
             <Link href="/notes">
